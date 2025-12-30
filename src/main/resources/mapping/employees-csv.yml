@@ -1,0 +1,51 @@
+delimiter: ","
+hasHeader: true
+duplicateCheck: [id, firstName, lastName]
+
+columns:
+  - name: id
+    header: id
+    type: LONG
+    required: true
+    nullable: false
+    pattern: "^[0-9]+$"
+
+  - name: firstName
+    header: firstName
+    type: STRING
+    required: true
+    nullable: false
+    pattern: "^[A-Za-zÀ-ÿ' -]{2,100}$"
+
+  - name: lastName
+    header: lastName
+    type: STRING
+    required: true
+    nullable: false
+    pattern: "^[A-Za-zÀ-ÿ' -]{2,100}$"
+
+  - name: position
+    header: position
+    type: STRING
+    required: false
+    nullable: true
+
+  - name: department
+    header: department
+    type: STRING
+    required: false
+    nullable: true
+
+  - name: hireDate
+    header: hireDate
+    type: LOCAL_DATE
+    required: false
+    nullable: true
+    pattern: "^\\d{4}-\\d{2}-\\d{2}$"
+
+  - name: salary
+    header: salary
+    type: DECIMAL
+    required: false
+    nullable: true
+    pattern: "^-?\\d+(\\.\\d+)?$"
