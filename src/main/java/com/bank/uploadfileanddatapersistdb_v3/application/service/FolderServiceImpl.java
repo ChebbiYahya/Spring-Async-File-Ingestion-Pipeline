@@ -1,5 +1,6 @@
 package com.bank.uploadfileanddatapersistdb_v3.application.service;
 
+import com.bank.uploadfileanddatapersistdb_v3.application.interfaces.DataFoldersProvider;
 import com.bank.uploadfileanddatapersistdb_v3.application.interfaces.FolderService;
 import com.bank.uploadfileanddatapersistdb_v3.config.DataFoldersProperties;
 import com.bank.uploadfileanddatapersistdb_v3.domain.exception.FileProcessingException;
@@ -29,35 +30,41 @@ import java.util.stream.Stream;
 class FolderServiceImpl implements FolderService {
 
 
-    private final DataFoldersProperties props;
+    private final DataFoldersProvider folders;
+    private static final String DEFAULT_CONFIG = "EMPLOYEES";
+
+    private java.nio.file.Path inPath() { return folders.inPath(DEFAULT_CONFIG); }
+    private java.nio.file.Path treatmentPath() { return folders.treatmentPath(DEFAULT_CONFIG); }
+    private java.nio.file.Path backupPath() { return folders.backupPath(DEFAULT_CONFIG); }
+    private java.nio.file.Path failedPath() { return folders.failedPath(DEFAULT_CONFIG); }
 
     private static final DateTimeFormatter TS = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
 
     public void ensureFoldersExist() {
         try {
-            Files.createDirectories(props.inPath());
-            Files.createDirectories(props.treatmentPath());
-            Files.createDirectories(props.backupPath());
-            Files.createDirectories(props.failedPath());
+            Files.createDirectories(inPath());
+            Files.createDirectories(treatmentPath());
+            Files.createDirectories(backupPath());
+            Files.createDirectories(failedPath());
         } catch (Exception e) {
             throw new FileProcessingException("Cannot create DATA folders: " + e.getMessage(), e);
         }
     }
 
     public List<String> listIn() {
-        return listFiles(props.inPath());
+        return listFiles(inPath());
     }
 
     public List<String> listTreatment() {
-        return listFiles(props.treatmentPath());
+        return listFiles(treatmentPath());
     }
 
     public List<String> listBackup() {
-        return listFiles(props.backupPath());
+        return listFiles(backupPath());
     }
 
     public List<String> listFailed() {
-        return listFiles(props.failedPath());
+        return listFiles(failedPath());
     }
 
     private List<String> listFiles(Path dir) {
@@ -79,7 +86,7 @@ class FolderServiceImpl implements FolderService {
             throw new FileProcessingException("Uploaded file is empty");
         }
         String original = sanitize(file.getOriginalFilename() == null ? "file" : file.getOriginalFilename());
-        Path dest = props.inPath().resolve(original);
+        Path dest = inPath().resolve(original);
         try (InputStream is = file.getInputStream()) {
             Files.copy(is, dest, StandardCopyOption.REPLACE_EXISTING);
             return dest;
@@ -94,7 +101,7 @@ class FolderServiceImpl implements FolderService {
      */
     public Path moveOneFromInToTreatmentWithTimestamp() {
         ensureFoldersExist();
-        try (Stream<Path> s = Files.list(props.inPath())) {
+        try (Stream<Path> s = Files.list(inPath())) {
             Path chosen = s.filter(Files::isRegularFile)
                     .min(Comparator.comparingLong(this::lastModifiedSafe))
                     .orElse(null);
@@ -103,7 +110,7 @@ class FolderServiceImpl implements FolderService {
 
             String fileName = chosen.getFileName().toString();
             String renamed = appendTimestamp(fileName, LocalDateTime.now());
-            Path target = props.treatmentPath().resolve(renamed);
+            Path target = treatmentPath().resolve(renamed);
 
             return Files.move(chosen, target, StandardCopyOption.REPLACE_EXISTING);
         } catch (Exception e) {
@@ -115,7 +122,7 @@ class FolderServiceImpl implements FolderService {
     public Path moveTreatmentToBackup(Path treatmentFile) {
         ensureFoldersExist();
         if (treatmentFile == null) throw new FileProcessingException("treatmentFile is null");
-        Path target = props.backupPath().resolve(treatmentFile.getFileName().toString());
+        Path target = backupPath().resolve(treatmentFile.getFileName().toString());
         try {
             return Files.move(treatmentFile, target, StandardCopyOption.REPLACE_EXISTING);
         } catch (Exception e) {
@@ -127,7 +134,7 @@ class FolderServiceImpl implements FolderService {
     public Path moveTreatmentToFailed(Path treatmentFile) {
         ensureFoldersExist();
         if (treatmentFile == null) throw new FileProcessingException("treatmentFile is null");
-        Path target = props.failedPath().resolve(treatmentFile.getFileName().toString());
+        Path target = failedPath().resolve(treatmentFile.getFileName().toString());
         try {
             return Files.move(treatmentFile, target, StandardCopyOption.REPLACE_EXISTING);
         } catch (Exception e) {

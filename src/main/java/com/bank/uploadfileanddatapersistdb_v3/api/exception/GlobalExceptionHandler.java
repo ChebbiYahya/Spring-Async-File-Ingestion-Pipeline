@@ -102,6 +102,17 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(apiError);
     }
 
+    @ExceptionHandler(ConfigNotFoundException .class)
+    public ResponseEntity<ApiError> handleConfigNotFoundException (ConfigNotFoundException  ex, HttpServletRequest request) {
+        ApiError apiError = ApiError.of(
+                HttpStatus.NOT_FOUND.value(),
+                "config not found",
+                ex.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(apiError);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleGeneric(Exception ex, HttpServletRequest request) {
         ApiError apiError = ApiError.of(

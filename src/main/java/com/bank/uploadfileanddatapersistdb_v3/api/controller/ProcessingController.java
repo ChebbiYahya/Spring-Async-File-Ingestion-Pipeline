@@ -24,11 +24,10 @@ public class ProcessingController {
 
     @PostMapping("/start-async")
     public ResponseEntity<?> startAsync(
-            @RequestParam(name = "mappingCsv", required = false) String mappingCsv,
-            @RequestParam(name = "mappingXml", required = false) String mappingXml
+            @RequestParam(name = "configId", required = false) String configId
     ) {
-        String jobId = asyncProcessingService.startJob(mappingCsv, mappingXml);
-        asyncProcessingService.runJob(jobId, mappingCsv, mappingXml);
+        String jobId = asyncProcessingService.startJob(configId);
+        asyncProcessingService.runJob(jobId, configId);
         return ResponseEntity.ok(Map.of("jobId", jobId));
     }
 

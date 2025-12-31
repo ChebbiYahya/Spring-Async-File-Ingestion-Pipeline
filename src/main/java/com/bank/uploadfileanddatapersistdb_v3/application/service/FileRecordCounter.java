@@ -26,22 +26,15 @@ public class FileRecordCounter {
 
     private final MappingRegistry mappingRegistry;
 
-    public int countRecords(Path filePath, String mappingCsv, String mappingXml) {
+    public int countRecords(Path filePath, String configId) {
         String name = filePath.getFileName().toString().toLowerCase(Locale.ROOT);
-
-        if (name.endsWith(".csv")) {
-            String mp = (mappingCsv == null || mappingCsv.isBlank()) ? "mapping/employees-csv.yml" : mappingCsv;
-            return countCsvRecords(filePath, mp);
-        }
-        if (name.endsWith(".xml")) {
-            String mp = (mappingXml == null || mappingXml.isBlank()) ? "mapping/employees-xml.yml" : mappingXml;
-            return countXmlRecords(filePath, mp);
-        }
+        if (name.endsWith(".csv")) return countCsvRecords(filePath, configId);
+        if (name.endsWith(".xml")) return countXmlRecords(filePath, configId);
         return 0;
     }
 
-    private int countCsvRecords(Path filePath, String mappingPath) {
-        CsvSchema schema = mappingRegistry.loadCsv(mappingPath);
+    private int countCsvRecords(Path filePath, String configId) {
+        CsvSchema schema = mappingRegistry.loadCsv(configId);
         try (Stream<String> lines = Files.lines(filePath)) {
             // Mimic "ignore empty lines".
             long nonEmpty = lines.filter(s -> s != null && !s.trim().isEmpty()).count();
@@ -54,8 +47,8 @@ public class FileRecordCounter {
         }
     }
 
-    private int countXmlRecords(Path filePath, String mappingPath) {
-        XmlSchema schema = mappingRegistry.loadXml(mappingPath);
+    private int countXmlRecords(Path filePath, String configId) {
+        XmlSchema schema = mappingRegistry.loadXml(configId);
         XMLInputFactory factory = XMLInputFactory.newFactory();
         int count = 0;
 

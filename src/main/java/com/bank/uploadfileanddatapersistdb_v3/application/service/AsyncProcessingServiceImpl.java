@@ -35,9 +35,10 @@ public class AsyncProcessingServiceImpl implements AsyncProcessingService {
     /**
      * Starts a job: counts total records in current DATA_IN, stores job state.
      */
-    public String startJob(String mappingCsv, String mappingXml) {
+    public String startJob(String configId) {
         folderService.ensureFoldersExist();
-        int totalRecords = countTotalRecordsInDataIn(mappingCsv, mappingXml);
+        String id = (configId == null || configId.isBlank()) ? "EMPLOYEES" : configId;
+        int totalRecords = countTotalRecordsInDataIn(id);
         return jobProgressService.start(totalRecords);
     }
 
@@ -45,7 +46,8 @@ public class AsyncProcessingServiceImpl implements AsyncProcessingService {
      * Runs the job asynchronously. The controller triggers this method after startJob().
      */
     @Async
-    public void runJob(String jobId, String mappingCsv, String mappingXml) {
+    public void runJob(String jobId, String configId) {
+        String id = (configId == null || configId.isBlank()) ? "EMPLOYEES" : configId;
         try {
             while (true) {
                 Path treatmentFile = folderService.moveOneFromInToTreatmentWithTimestamp();
@@ -55,22 +57,11 @@ public class AsyncProcessingServiceImpl implements AsyncProcessingService {
 
                 try {
                     if (name.endsWith(".csv")) {
-                        String mp = (mappingCsv == null || mappingCsv.isBlank()) ? "mapping/employees-csv.yml" : mappingCsv;
-                        ingestionService.ingestCsvPathWithProgress(
-                                treatmentFile,
-                                mp,
-                                () -> jobProgressService.incrementProcessed(jobId)
-                        );
-
+                        ingestionService.ingestCsvPathWithProgress(treatmentFile, id, () -> jobProgressService.incrementProcessed(jobId));
                     } else if (name.endsWith(".xml")) {
-                        String mp = (mappingXml == null || mappingXml.isBlank()) ? "mapping/employees-xml.yml" : mappingXml;
-                        ingestionService.ingestXmlPathWithProgress(
-                                treatmentFile,
-                                mp,
-                                () -> jobProgressService.incrementProcessed(jobId)
-                        );
-
-                    } else {
+                        ingestionService.ingestXmlPathWithProgress(treatmentFile, id, () -> jobProgressService.incrementProcessed(jobId));
+                    }
+                    else {
                         // Unsupported -> failed (do not increment processedRecords; totalRecords was 0 for it)
                         folderService.moveTreatmentToFailed(treatmentFile);
                         continue;
@@ -79,6 +70,9 @@ public class AsyncProcessingServiceImpl implements AsyncProcessingService {
                     folderService.moveTreatmentToBackup(treatmentFile);
 
                 } catch (Exception ex) {
+                    org.slf4j.LoggerFactory.getLogger(AsyncProcessingServiceImpl.class)
+                            .error("Processing failed for file {}: {}", treatmentFile.getFileName(), ex.getMessage(), ex);
+
                     folderService.moveTreatmentToFailed(treatmentFile);
                     // Continue with next files, job is not interrupted
                 }
@@ -91,7 +85,7 @@ public class AsyncProcessingServiceImpl implements AsyncProcessingService {
         }
     }
 
-    private int countTotalRecordsInDataIn(String mappingCsv, String mappingXml) {
+    private int countTotalRecordsInDataIn(String configId) {
         try {
             List<Path> files;
             try (var s = Files.list(props.inPath())) {
@@ -102,7 +96,7 @@ public class AsyncProcessingServiceImpl implements AsyncProcessingService {
 
             int total = 0;
             for (Path p : files) {
-                total += Math.max(0, fileRecordCounter.countRecords(p, mappingCsv, mappingXml));
+                total += Math.max(0, fileRecordCounter.countRecords(p, configId));
             }
             return total;
 

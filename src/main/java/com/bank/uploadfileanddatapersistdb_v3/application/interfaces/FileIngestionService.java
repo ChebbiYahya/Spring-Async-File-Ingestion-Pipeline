@@ -9,13 +9,7 @@ import java.nio.file.Path;
  */
 public interface FileIngestionService {
 
-//    int ingestCsv(MultipartFile file);
-//
-//    int ingestXml(MultipartFile file);
-//
-//    public int ingestCsvPath(Path filePath, String mappingPath);
-//
-//    public int ingestXmlPath(Path filePath, String mappingPath);
+
 
     public int ingestCsvPathWithProgress(Path filePath, String mappingPath, ProgressReporter progressReporter);
 

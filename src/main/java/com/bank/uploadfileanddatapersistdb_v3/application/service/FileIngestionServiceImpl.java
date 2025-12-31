@@ -35,70 +35,9 @@ public class FileIngestionServiceImpl implements FileIngestionService {
     private final EmployeeRecordPersister employeePersister;
     private final EmployeeDuplicateDbChecker employeeDuplicateDbChecker;
 
-//    @Override
-//    public int ingestCsv(MultipartFile file) {
-//        return ingestCsv(file, "mapping/employees-csv.yml");
-//    }
-//
-//    @Override
-//    public int ingestXml(MultipartFile file) {
-//        return ingestXml(file, "mapping/employees-xml.yml");
-//    }
-//
-//    public int ingestCsv(MultipartFile file, String mappingPath) {
-//        if (file == null || file.isEmpty()) {
-//            throw new InvalidFileFormatException("CSV file is empty");
-//        }
-//
-//        CsvSchema schema = mappingRegistry.loadCsv(mappingPath);
-//
-//        try (RecordReader rr = new CsvRecordReader(file, schema)) {
-//            return pipeline.process(
-//                    file.getOriginalFilename(),
-//                    schema.getDuplicateCheck(),
-//                    rr.iterator(),
-//                    schema.getColumns(),
-//                    employeePersister::persist,
-//                    (record, fields) -> employeeDuplicateDbChecker.exists(record, fields)
-//            );
-//        } catch (Exception e) {
-//            throw new StreamProcessingException("Error reading CSV file: " + e.getMessage(), e);
-//        }
-//    }
-//
-//    public int ingestXml(MultipartFile file, String mappingPath) {
-//        if (file == null || file.isEmpty()) {
-//            throw new InvalidFileFormatException("XML file is empty");
-//        }
-//
-//        XmlSchema schema = mappingRegistry.loadXml(mappingPath);
-//
-//        try (RecordReader rr = new XmlRecordReader(file, schema)) {
-//            return pipeline.process(
-//                    file.getOriginalFilename(),
-//                    schema.getDuplicateCheck(),
-//                    rr.iterator(),
-//                    schema.getFields(),
-//                    employeePersister::persist,
-//                    (record, fields) -> employeeDuplicateDbChecker.exists(record, fields)
-//            );
-//        } catch (Exception e) {
-//            throw new StreamProcessingException("Error reading XML file: " + e.getMessage(), e);
-//        }
-//    }
 
-    // --------- ingest from file system Path ---------
-//
-//    public int ingestCsvPath(Path filePath, String mappingPath) {
-//        return ingestCsv(new PathMultipartFile(filePath), mappingPath);
-//    }
-//
-//    public int ingestXmlPath(Path filePath, String mappingPath) {
-//        return ingestXml(new PathMultipartFile(filePath), mappingPath);
-//    }
-
-    public int ingestCsvPathWithProgress(Path filePath, String mappingPath, ProgressReporter progressReporter) {
-        CsvSchema schema = mappingRegistry.loadCsv(mappingPath);
+    public int ingestCsvPathWithProgress(Path filePath, String configId, ProgressReporter progressReporter) {
+        CsvSchema schema = mappingRegistry.loadCsv(configId);
         try (RecordReader rr = new CsvRecordReader(new PathMultipartFile(filePath), schema)) {
             return pipeline.process(
                     filePath.getFileName().toString(),
@@ -114,8 +53,8 @@ public class FileIngestionServiceImpl implements FileIngestionService {
         }
     }
 
-    public int ingestXmlPathWithProgress(Path filePath, String mappingPath, ProgressReporter progressReporter) {
-        XmlSchema schema = mappingRegistry.loadXml(mappingPath);
+    public int ingestXmlPathWithProgress(Path filePath, String configId, ProgressReporter progressReporter) {
+        XmlSchema schema = mappingRegistry.loadXml(configId);
         try (RecordReader rr = new XmlRecordReader(new PathMultipartFile(filePath), schema)) {
             return pipeline.process(
                     filePath.getFileName().toString(),
