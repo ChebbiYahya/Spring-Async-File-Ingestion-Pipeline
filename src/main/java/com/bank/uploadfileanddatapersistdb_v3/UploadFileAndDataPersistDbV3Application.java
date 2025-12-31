@@ -8,7 +8,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
 
 @SpringBootApplication
 @EnableAsync
-@EnableConfigurationProperties(DataFoldersProperties.class)
+//@EnableConfigurationProperties(DataFoldersProperties.class)
 public class UploadFileAndDataPersistDbV3Application {
 
 	public static void main(String[] args) {

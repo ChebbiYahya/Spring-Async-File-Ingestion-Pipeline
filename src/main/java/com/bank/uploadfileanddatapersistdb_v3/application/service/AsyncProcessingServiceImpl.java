@@ -1,9 +1,6 @@
 package com.bank.uploadfileanddatapersistdb_v3.application.service;
 
-import com.bank.uploadfileanddatapersistdb_v3.application.interfaces.AsyncProcessingService;
-import com.bank.uploadfileanddatapersistdb_v3.application.interfaces.FileIngestionService;
-import com.bank.uploadfileanddatapersistdb_v3.application.interfaces.FolderService;
-import com.bank.uploadfileanddatapersistdb_v3.application.interfaces.JobProgressService;
+import com.bank.uploadfileanddatapersistdb_v3.application.interfaces.*;
 import com.bank.uploadfileanddatapersistdb_v3.config.DataFoldersProperties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Async;
@@ -26,7 +23,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AsyncProcessingServiceImpl implements AsyncProcessingService {
 
-    private final DataFoldersProperties props;
+    private final DataFoldersProvider folders;
     private final FolderService folderService;
     private final FileIngestionService ingestionService;
     private final JobProgressService jobProgressService;
@@ -87,8 +84,11 @@ public class AsyncProcessingServiceImpl implements AsyncProcessingService {
 
     private int countTotalRecordsInDataIn(String configId) {
         try {
+            // Dossier IN venant de la DB
+            Path inDir = folders.inPath(configId);
+
             List<Path> files;
-            try (var s = Files.list(props.inPath())) {
+            try (var s = Files.list(inDir)) {
                 files = s.filter(Files::isRegularFile)
                         .sorted(Comparator.comparing(Path::toString))
                         .collect(Collectors.toList());
@@ -101,8 +101,10 @@ public class AsyncProcessingServiceImpl implements AsyncProcessingService {
             return total;
 
         } catch (Exception e) {
-            // If counting fails, fallback to 0 => percent may stay 0, but processing still works.
+            org.slf4j.LoggerFactory.getLogger(AsyncProcessingServiceImpl.class)
+                    .error("Failed to count total records in DATA_IN: {}", e.getMessage(), e);
             return 0;
         }
     }
+
 }
