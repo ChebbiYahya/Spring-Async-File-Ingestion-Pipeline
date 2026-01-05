@@ -1,7 +1,6 @@
 package com.bank.uploadfileanddatapersistdb_v3.application.service;
 
 import com.bank.uploadfileanddatapersistdb_v3.application.interfaces.FileIngestionService;
-import com.bank.uploadfileanddatapersistdb_v3.domain.exception.InvalidFileFormatException;
 import com.bank.uploadfileanddatapersistdb_v3.domain.exception.StreamProcessingException;
 import com.bank.uploadfileanddatapersistdb_v3.infrastructure.filesystem.PathMultipartFile;
 import com.bank.uploadfileanddatapersistdb_v3.infrastructure.ingestion.parser.CsvRecordReader;
@@ -16,55 +15,116 @@ import com.bank.uploadfileanddatapersistdb_v3.infrastructure.mapping.model.XmlSc
 import com.bank.uploadfileanddatapersistdb_v3.application.interfaces.ProgressReporter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.file.Path;
 
 /**
- * Coordinates ingestion of one CSV/XML file:
- * - loads YAML mapping
- * - builds corresponding record reader
- * - delegates to IngestionPipeline (validation, duplicates, persistence, logs)
+ * FileIngestionServiceImpl
+ *
+ * Service applicatif qui orchestre l’ingestion d’un fichier (CSV/XML).
+ *
+ * Responsabilités :
+ * - charger le "schéma" (mapping) depuis la configuration DB (via MappingRegistry)
+ * - créer le RecordReader adapté (CSV ou XML) pour lire le fichier en streaming
+ * - déléguer le traitement record-par-record au IngestionPipeline :
+ *      - validation
+ *      - détection de doublons (fichier + DB)
+ *      - persistance
+ *      - logs détaillés
+ *      - callback de progression
+ *
+ * Important :
+ * - Ce service ne fait pas les validations ni la persistance directement.
+ * - Il connecte les composants (coordination).
  */
 @Service
 @RequiredArgsConstructor
 public class FileIngestionServiceImpl implements FileIngestionService {
 
+    /**
+     * Charge les schémas CSV/XML à partir de la configuration en DB (FileReaderConfig).
+     */
     private final MappingRegistry mappingRegistry;
+
+    /**
+     * Pipeline générique réutilisable pour CSV et XML.
+     * Il applique les règles : validation, doublons, persistance, logs, progress.
+     */
     private final IngestionPipeline pipeline;
+
+    /**
+     * Persiste une ligne validée sous forme d'entité Employee en base.
+     */
     private final EmployeeRecordPersister employeePersister;
+
+    /**
+     * Vérifie si le record (selon les champs duplicateCheck) existe déjà en DB.
+     */
     private final EmployeeDuplicateDbChecker employeeDuplicateDbChecker;
 
-
+    /**
+     * Ingestion d’un fichier CSV (Path) avec reporting de progression.
+     *
+     * @param filePath chemin du fichier CSV dans DATA_TREATMENT
+     * @param configId identifiant de config (ex: EMPLOYEES)
+     * @param progressReporter callback appelé après chaque record traité
+     * @return nombre de records insérés avec succès
+     */
+    @Override
     public int ingestCsvPathWithProgress(Path filePath, String configId, ProgressReporter progressReporter) {
+
+        // 1) Charger la config/mapping CSV depuis la DB
         CsvSchema schema = mappingRegistry.loadCsv(configId);
+
+        // 2) Adapter Path -> MultipartFile pour réutiliser CsvRecordReader
+        // 3) RecordReader est AutoCloseable => try-with-resources ferme parser/streams
         try (RecordReader rr = new CsvRecordReader(new PathMultipartFile(filePath), schema)) {
+
+            // 4) Délégation au pipeline générique
             return pipeline.process(
-                    filePath.getFileName().toString(),
-                    schema.getDuplicateCheck(),
-                    rr.iterator(),
-                    schema.getColumns(),
-                    employeePersister::persist,
-                    (record, fields) -> employeeDuplicateDbChecker.exists(record, fields),
-                    progressReporter
+                    filePath.getFileName().toString(),    // nom pour les logs
+                    schema.getDuplicateCheck(),           // champs de détection doublons
+                    rr.iterator(),                        // records (Map<String,String>) en streaming
+                    schema.getColumns(),                  // règles de validation (CSV)
+                    record -> employeePersister.persist(record, schema.getColumns()),          // persister un record validé
+                    (record, fields) -> employeeDuplicateDbChecker.exists(record, fields, schema.getColumns()), // doublon DB
+                    progressReporter                      // callback progression
             );
+
         } catch (Exception e) {
+            // On normalise toute erreur technique comme StreamProcessingException
             throw new StreamProcessingException("CSV ingestion failed: " + e.getMessage(), e);
         }
     }
 
+    /**
+     * Ingestion d’un fichier XML (Path) avec reporting de progression.
+     *
+     * @param filePath chemin du fichier XML dans DATA_TREATMENT
+     * @param configId identifiant de config (ex: EMPLOYEES)
+     * @param progressReporter callback appelé après chaque record traité
+     * @return nombre de records insérés avec succès
+     */
+    @Override
     public int ingestXmlPathWithProgress(Path filePath, String configId, ProgressReporter progressReporter) {
+
+        // 1) Charger la config/mapping XML depuis la DB
         XmlSchema schema = mappingRegistry.loadXml(configId);
+
+        // 2) Adapter Path -> MultipartFile pour réutiliser XmlRecordReader
         try (RecordReader rr = new XmlRecordReader(new PathMultipartFile(filePath), schema)) {
+
+            // 3) Délégation au pipeline générique
             return pipeline.process(
-                    filePath.getFileName().toString(),
-                    schema.getDuplicateCheck(),
-                    rr.iterator(),
-                    schema.getFields(),
-                    employeePersister::persist,
-                    (record, fields) -> employeeDuplicateDbChecker.exists(record, fields),
-                    progressReporter
+                    filePath.getFileName().toString(),    // nom pour les logs
+                    schema.getDuplicateCheck(),           // champs de détection doublons
+                    rr.iterator(),                        // records (Map<String,String>) en streaming
+                    schema.getFields(),                   // règles de validation (XML)
+                    record -> employeePersister.persist(record, schema.getFields()),           // persister un record validé
+                    (record, fields) -> employeeDuplicateDbChecker.exists(record, fields, schema.getFields()), // doublon DB
+                    progressReporter                      // callback progression
             );
+
         } catch (Exception e) {
             throw new StreamProcessingException("XML ingestion failed: " + e.getMessage(), e);
         }

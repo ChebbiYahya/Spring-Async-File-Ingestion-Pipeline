@@ -3,20 +3,43 @@ package com.bank.uploadfileanddatapersistdb_v3.infrastructure.ingestion.validati
 import com.bank.uploadfileanddatapersistdb_v3.infrastructure.mapping.model.rules.FieldRule;
 
 /**
- * Applies validation rules for a single field:
- * - required / nullable checks
- * - type check
- * - regex pattern check (if configured)
+ * FieldValidator
+ *
+ * Valide un champ individuel (String) en appliquant les règles du mapping :
+ * - required / nullable
+ * - type attendu
+ * - regex (pattern)
+ *
+ * Cette classe est utilisée par IngestionPipeline pour chaque champ
+ * de chaque record.
  */
 public class FieldValidator {
 
+    /**
+     * Vérifie la compatibilité d'une valeur String avec un type logique
+     * (LONG, STRING, LOCAL_DATE, DECIMAL, etc.).
+     */
     private final TypeChecker typeChecker = new TypeChecker();
 
+    /**
+     * Valide une valeur brute provenant du fichier.
+     *
+     * @param rule règle de mapping du champ (nom, type, required, nullable, pattern)
+     * @param raw  valeur brute lue depuis le fichier (String ou null)
+     * @param line numéro de ligne/record (pour logs et erreurs)
+     * @return valeur normalisée (trim) ou null
+     *
+     * @throws RecordValidationException si une règle n'est pas respectée
+     */
     public String validate(FieldRule rule, String raw, int line) {
+
+        // Détection valeur absente ou vide
         boolean blank = (raw == null || raw.trim().isEmpty());
 
-        // 1) required / nullable
+        // 1) REQUIRED / NULLABLE
         if (blank) {
+
+            // Champ obligatoire mais valeur absente
             if (rule.isRequired()) {
                 throw new RecordValidationException(
                         ErrorCode.REQUIRED_FIELD_MISSING,
@@ -25,6 +48,8 @@ public class FieldValidator {
                         "Required field '" + rule.getName() + "' is missing/empty"
                 );
             }
+
+            // Champ non nullable mais valeur absente
             if (!rule.isNullable()) {
                 throw new RecordValidationException(
                         ErrorCode.NULL_NOT_ALLOWED,
@@ -33,12 +58,16 @@ public class FieldValidator {
                         "Field '" + rule.getName() + "' cannot be null/empty"
                 );
             }
+
+            // Champ optionnel et nullable → OK
             return null;
         }
 
+        // Normalisation (suppression des espaces)
         String value = raw.trim();
 
-        // 2) type check
+        // 2) TYPE CHECK
+        // Vérifie que la valeur correspond au type déclaré dans le mapping
         if (!typeChecker.matches(rule.getType(), value)) {
             throw new RecordValidationException(
                     ErrorCode.TYPE_MISMATCH,
@@ -48,7 +77,7 @@ public class FieldValidator {
             );
         }
 
-        // 3) pattern check
+        // 3) PATTERN CHECK (si une regex est définie)
         if (rule.getPattern() != null && !rule.getPattern().isBlank()) {
             if (!java.util.regex.Pattern.matches(rule.getPattern(), value)) {
                 throw new RecordValidationException(
@@ -60,6 +89,7 @@ public class FieldValidator {
             }
         }
 
+        // Valeur valide et normalisée
         return value;
     }
 }
