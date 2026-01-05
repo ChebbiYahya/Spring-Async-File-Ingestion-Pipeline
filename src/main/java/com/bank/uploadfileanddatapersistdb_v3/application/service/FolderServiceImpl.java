@@ -11,6 +11,7 @@ import java.io.InputStream;
 import java.nio.file.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -162,6 +163,63 @@ class FolderServiceImpl implements FolderService {
     }
 
     /**
+     * Deletes a single file from DATA_IN by name.
+     *
+     * @param fileName file name as listed by listIn()
+     * @return true if the file was deleted, false if it did not exist
+     */
+    @Override
+    public boolean deleteFromIn(String fileName) {
+        ensureFoldersExist();
+        Path target = resolveInFile(fileName);
+
+        try {
+            return Files.deleteIfExists(target);
+        } catch (Exception e) {
+            throw new FileProcessingException(
+                    "Cannot delete file from DATA_IN: " + fileName + " => " + e.getMessage(),
+                    e
+            );
+        }
+    }
+
+    /**
+     * Deletes all regular files from DATA_IN and returns the deleted names.
+     */
+    @Override
+    public List<String> deleteAllFromIn() {
+        ensureFoldersExist();
+
+        try (Stream<Path> s = Files.list(inPath())) {
+            List<Path> files = s.filter(Files::isRegularFile)
+                    .collect(Collectors.toList());
+
+            List<String> deleted = new ArrayList<>();
+            for (Path file : files) {
+                try {
+                    if (Files.deleteIfExists(file)) {
+                        deleted.add(file.getFileName().toString());
+                    }
+                } catch (Exception e) {
+                    throw new FileProcessingException(
+                            "Cannot delete file from DATA_IN: " + file.getFileName() + " => " + e.getMessage(),
+                            e
+                    );
+                }
+            }
+
+            deleted.sort(String::compareTo);
+            return deleted;
+        } catch (FileProcessingException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new FileProcessingException(
+                    "Cannot delete files from DATA_IN: " + e.getMessage(),
+                    e
+            );
+        }
+    }
+    /**
      * Déplace UN seul fichier de DATA_IN vers DATA_TREATMENT.
      *
      * Objectif :
@@ -174,6 +232,7 @@ class FolderServiceImpl implements FolderService {
      *
      * @return Path du fichier déplacé dans DATA_TREATMENT, ou null s’il n’y a aucun fichier à traiter
      */
+
     @Override
     public Path moveOneFromInToTreatmentWithTimestamp() {
         ensureFoldersExist();
@@ -256,6 +315,26 @@ class FolderServiceImpl implements FolderService {
         }
     }
 
+
+    /**
+     * Resolves a simple file name inside DATA_IN and rejects path traversal.
+     */
+    private Path resolveInFile(String fileName) {
+        if (fileName == null || fileName.isBlank()) {
+            throw new FileProcessingException("File name is required");
+        }
+
+        Path name = Paths.get(fileName);
+        String simpleName = name.getFileName().toString();
+        if (name.isAbsolute()
+                || name.getNameCount() != 1
+                || ".".equals(simpleName)
+                || "..".equals(simpleName)) {
+            throw new FileProcessingException("Invalid file name: " + fileName);
+        }
+
+        return inPath().resolve(simpleName);
+    }
     /**
      * Ajoute un timestamp au nom de fichier avant extension.
      * Exemple : employees.csv -> employees_2026-01-02_10-15-00.csv

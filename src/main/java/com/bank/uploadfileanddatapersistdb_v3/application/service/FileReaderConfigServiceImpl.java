@@ -1,10 +1,22 @@
 package com.bank.uploadfileanddatapersistdb_v3.application.service;
 
+import com.bank.uploadfileanddatapersistdb_v3.api.dto.DuplicateCheckUpdateDto;
 import com.bank.uploadfileanddatapersistdb_v3.api.dto.FileReaderConfigDto;
+import com.bank.uploadfileanddatapersistdb_v3.api.dto.FileReaderConfigMetaUpdateDto;
+import com.bank.uploadfileanddatapersistdb_v3.api.dto.FileReaderMappingCsvUpdateDto;
+import com.bank.uploadfileanddatapersistdb_v3.api.dto.FileReaderMappingXmlUpdateDto;
 import com.bank.uploadfileanddatapersistdb_v3.api.mapper.FileReaderConfigMapper;
 import com.bank.uploadfileanddatapersistdb_v3.application.interfaces.FileReaderConfigService;
 import com.bank.uploadfileanddatapersistdb_v3.domain.exception.ConfigNotFoundException;
+import com.bank.uploadfileanddatapersistdb_v3.domain.exception.FileProcessingException;
+import com.bank.uploadfileanddatapersistdb_v3.domain.exception.MappingItemNotFoundException;
+import com.bank.uploadfileanddatapersistdb_v3.domain.model.entity.CsvColumnEntity;
+import com.bank.uploadfileanddatapersistdb_v3.domain.model.entity.DataFoldersEmbeddable;
 import com.bank.uploadfileanddatapersistdb_v3.domain.model.entity.FileReaderConfig;
+import com.bank.uploadfileanddatapersistdb_v3.domain.model.entity.FileReaderMappingCSV;
+import com.bank.uploadfileanddatapersistdb_v3.domain.model.entity.FileReaderMappingXML;
+import com.bank.uploadfileanddatapersistdb_v3.domain.model.entity.XmlFieldEntity;
+import com.bank.uploadfileanddatapersistdb_v3.domain.model.enums.FieldType;
 import com.bank.uploadfileanddatapersistdb_v3.infrastructure.persistence.repository.FileReaderConfigRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -148,6 +160,474 @@ public class FileReaderConfigServiceImpl implements FileReaderConfigService {
     @Override
     @Transactional // Écriture
     public void delete(String id) {
+        if (id == null || id.isBlank()) {
+            throw new ConfigNotFoundException("Config not found: " + id);
+        }
+        if (!repo.existsById(id)) {
+            throw new ConfigNotFoundException("Config not found: " + id);
+        }
         repo.deleteById(id);
+    }
+
+    @Override
+    @Transactional
+    public FileReaderConfigDto updateMeta(String id, FileReaderConfigMetaUpdateDto update) {
+        if (update == null) {
+            throw new FileProcessingException("Update payload is required");
+        }
+
+        FileReaderConfig cfg = getEntity(id);
+
+        if (update.getDescription() != null) {
+            cfg.setDescription(update.getDescription());
+        }
+        if (update.getModeChargement() != null) {
+            cfg.setModeChargement(update.getModeChargement());
+        }
+        if (update.getPaths() != null) {
+            DataFoldersEmbeddable paths = cfg.getPaths();
+            if (paths == null) {
+                paths = new DataFoldersEmbeddable();
+            }
+
+            if (update.getPaths().getBaseDir() != null) {
+                paths.setBaseDir(update.getPaths().getBaseDir());
+            }
+            if (update.getPaths().getInDir() != null) {
+                paths.setInDir(update.getPaths().getInDir());
+            }
+            if (update.getPaths().getTreatmentDir() != null) {
+                paths.setTreatmentDir(update.getPaths().getTreatmentDir());
+            }
+            if (update.getPaths().getBackupDir() != null) {
+                paths.setBackupDir(update.getPaths().getBackupDir());
+            }
+            if (update.getPaths().getFailedDir() != null) {
+                paths.setFailedDir(update.getPaths().getFailedDir());
+            }
+
+            cfg.setPaths(paths);
+        }
+
+        repo.save(cfg);
+        return mapper.toDto(cfg);
+    }
+
+    @Override
+    @Transactional
+    public FileReaderConfigDto updateCsvSettings(String id, FileReaderMappingCsvUpdateDto update) {
+        if (update == null) {
+            throw new FileProcessingException("Update payload is required");
+        }
+
+        FileReaderConfig cfg = getEntity(id);
+        FileReaderMappingCSV csv = getOrCreateCsv(cfg);
+
+        if (update.getDelimiter() != null) {
+            csv.setDelimiter(update.getDelimiter());
+        }
+        if (update.getHasHeader() != null) {
+            csv.setHasHeader(update.getHasHeader());
+        }
+
+        repo.save(cfg);
+        return mapper.toDto(cfg);
+    }
+
+    @Override
+    @Transactional
+    public FileReaderConfigDto addCsvDuplicateCheck(String id, DuplicateCheckUpdateDto update) {
+        FileReaderConfig cfg = getEntity(id);
+        FileReaderMappingCSV csv = getOrCreateCsv(cfg);
+
+        java.util.List<String> fields = normalizeDuplicateFields(update);
+        csv.getDuplicateCheck().addAll(fields);
+
+        repo.save(cfg);
+        return mapper.toDto(cfg);
+    }
+
+    @Override
+    @Transactional
+    public FileReaderConfigDto removeCsvDuplicateCheck(String id, DuplicateCheckUpdateDto update) {
+        FileReaderConfig cfg = getEntity(id);
+        FileReaderMappingCSV csv = getOrCreateCsv(cfg);
+
+        java.util.List<String> fields = normalizeDuplicateFields(update);
+        csv.getDuplicateCheck().removeAll(fields);
+
+        repo.save(cfg);
+        return mapper.toDto(cfg);
+    }
+
+    @Override
+    @Transactional
+    public FileReaderConfigDto addCsvColumn(String id, FileReaderConfigDto.CsvColumnDto column) {
+        FileReaderConfig cfg = getEntity(id);
+        FileReaderMappingCSV csv = getOrCreateCsv(cfg);
+
+        if (column == null) {
+            throw new FileProcessingException("CSV column payload is required");
+        }
+        String name = normalizeName(column.getName(), "CSV column");
+
+        if (findCsvColumnByName(csv, name) != null) {
+            throw new FileProcessingException("CSV column already exists: " + name);
+        }
+        if (hasCsvOrderIndexConflict(csv, column.getOrderIndex(), null)) {
+            throw new FileProcessingException("CSV column orderIndex already exists: " + column.getOrderIndex());
+        }
+
+        CsvColumnEntity entity = CsvColumnEntity.builder()
+                .orderIndex(column.getOrderIndex())
+                .name(name)
+                .header(column.getHeader())
+                .type(parseFieldType(column.getType()))
+                .required(column.isRequired())
+                .nullable(column.isNullable())
+                .pattern(column.getPattern())
+                .build();
+
+        csv.addColumn(entity);
+
+        repo.save(cfg);
+        return mapper.toDto(cfg);
+    }
+
+    @Override
+    @Transactional
+    public FileReaderConfigDto updateCsvColumn(String id, Long columnId, FileReaderConfigDto.CsvColumnDto column) {
+        FileReaderConfig cfg = getEntity(id);
+        FileReaderMappingCSV csv = getOrCreateCsv(cfg);
+
+        if (columnId == null) {
+            throw new MappingItemNotFoundException("CSV column not found: " + columnId);
+        }
+
+        CsvColumnEntity existing = findCsvColumnById(csv, columnId);
+        if (existing == null) {
+            throw new MappingItemNotFoundException("CSV column not found: " + columnId);
+        }
+
+        if (column == null) {
+            throw new FileProcessingException("CSV column payload is required");
+        }
+
+        if (column.getName() != null && !column.getName().isBlank()) {
+            String newName = column.getName().trim();
+            CsvColumnEntity conflict = findCsvColumnByName(csv, newName);
+            if (conflict != null && !columnId.equals(conflict.getId())) {
+                throw new FileProcessingException("CSV column already exists: " + newName);
+            }
+            existing.setName(newName);
+        }
+        if (hasCsvOrderIndexConflict(csv, column.getOrderIndex(), columnId)) {
+            throw new FileProcessingException("CSV column orderIndex already exists: " + column.getOrderIndex());
+        }
+
+        applyCsvColumnUpdate(existing, column);
+
+        repo.save(cfg);
+        return mapper.toDto(cfg);
+    }
+
+    @Override
+    @Transactional
+    public FileReaderConfigDto deleteCsvColumn(String id, Long columnId) {
+        FileReaderConfig cfg = getEntity(id);
+        FileReaderMappingCSV csv = getOrCreateCsv(cfg);
+
+        if (columnId == null) {
+            throw new MappingItemNotFoundException("CSV column not found: " + columnId);
+        }
+
+        boolean removed = csv.getColumns().removeIf(c -> columnId.equals(c.getId()));
+        if (!removed) {
+            throw new MappingItemNotFoundException("CSV column not found: " + columnId);
+        }
+
+        repo.save(cfg);
+        return mapper.toDto(cfg);
+    }
+
+    @Override
+    @Transactional
+    public FileReaderConfigDto updateXmlSettings(String id, FileReaderMappingXmlUpdateDto update) {
+        if (update == null) {
+            throw new FileProcessingException("Update payload is required");
+        }
+
+        FileReaderConfig cfg = getEntity(id);
+        FileReaderMappingXML xml = getOrCreateXml(cfg);
+
+        if (update.getRootElement() != null) {
+            xml.setRootElement(update.getRootElement());
+        }
+        if (update.getRecordElement() != null) {
+            xml.setRecordElement(update.getRecordElement());
+        }
+
+        repo.save(cfg);
+        return mapper.toDto(cfg);
+    }
+
+    @Override
+    @Transactional
+    public FileReaderConfigDto addXmlDuplicateCheck(String id, DuplicateCheckUpdateDto update) {
+        FileReaderConfig cfg = getEntity(id);
+        FileReaderMappingXML xml = getOrCreateXml(cfg);
+
+        java.util.List<String> fields = normalizeDuplicateFields(update);
+        xml.getDuplicateCheck().addAll(fields);
+
+        repo.save(cfg);
+        return mapper.toDto(cfg);
+    }
+
+    @Override
+    @Transactional
+    public FileReaderConfigDto removeXmlDuplicateCheck(String id, DuplicateCheckUpdateDto update) {
+        FileReaderConfig cfg = getEntity(id);
+        FileReaderMappingXML xml = getOrCreateXml(cfg);
+
+        java.util.List<String> fields = normalizeDuplicateFields(update);
+        xml.getDuplicateCheck().removeAll(fields);
+
+        repo.save(cfg);
+        return mapper.toDto(cfg);
+    }
+
+    @Override
+    @Transactional
+    public FileReaderConfigDto addXmlField(String id, FileReaderConfigDto.XmlFieldDto field) {
+        FileReaderConfig cfg = getEntity(id);
+        FileReaderMappingXML xml = getOrCreateXml(cfg);
+
+        if (field == null) {
+            throw new FileProcessingException("XML field payload is required");
+        }
+        String name = normalizeName(field.getName(), "XML field");
+
+        if (findXmlFieldByName(xml, name) != null) {
+            throw new FileProcessingException("XML field already exists: " + name);
+        }
+        if (hasXmlOrderIndexConflict(xml, field.getOrderIndex(), null)) {
+            throw new FileProcessingException("XML field orderIndex already exists: " + field.getOrderIndex());
+        }
+
+        XmlFieldEntity entity = XmlFieldEntity.builder()
+                .orderIndex(field.getOrderIndex())
+                .name(name)
+                .tag(field.getTag())
+                .type(parseFieldType(field.getType()))
+                .required(field.isRequired())
+                .nullable(field.isNullable())
+                .pattern(field.getPattern())
+                .build();
+
+        xml.addField(entity);
+
+        repo.save(cfg);
+        return mapper.toDto(cfg);
+    }
+
+    @Override
+    @Transactional
+    public FileReaderConfigDto updateXmlField(String id, Long fieldId, FileReaderConfigDto.XmlFieldDto field) {
+        FileReaderConfig cfg = getEntity(id);
+        FileReaderMappingXML xml = getOrCreateXml(cfg);
+
+        if (fieldId == null) {
+            throw new MappingItemNotFoundException("XML field not found: " + fieldId);
+        }
+
+        XmlFieldEntity existing = findXmlFieldById(xml, fieldId);
+        if (existing == null) {
+            throw new MappingItemNotFoundException("XML field not found: " + fieldId);
+        }
+
+        if (field == null) {
+            throw new FileProcessingException("XML field payload is required");
+        }
+
+        if (field.getName() != null && !field.getName().isBlank()) {
+            String newName = field.getName().trim();
+            XmlFieldEntity conflict = findXmlFieldByName(xml, newName);
+            if (conflict != null && !fieldId.equals(conflict.getId())) {
+                throw new FileProcessingException("XML field already exists: " + newName);
+            }
+            existing.setName(newName);
+        }
+        if (hasXmlOrderIndexConflict(xml, field.getOrderIndex(), fieldId)) {
+            throw new FileProcessingException("XML field orderIndex already exists: " + field.getOrderIndex());
+        }
+
+        applyXmlFieldUpdate(existing, field);
+
+        repo.save(cfg);
+        return mapper.toDto(cfg);
+    }
+
+    @Override
+    @Transactional
+    public FileReaderConfigDto deleteXmlField(String id, Long fieldId) {
+        FileReaderConfig cfg = getEntity(id);
+        FileReaderMappingXML xml = getOrCreateXml(cfg);
+
+        if (fieldId == null) {
+            throw new MappingItemNotFoundException("XML field not found: " + fieldId);
+        }
+
+        boolean removed = xml.getFields().removeIf(f -> fieldId.equals(f.getId()));
+        if (!removed) {
+            throw new MappingItemNotFoundException("XML field not found: " + fieldId);
+        }
+
+        repo.save(cfg);
+        return mapper.toDto(cfg);
+    }
+
+    private FileReaderMappingCSV getOrCreateCsv(FileReaderConfig cfg) {
+        FileReaderMappingCSV csv = cfg.getFileMappingCSV();
+        if (csv == null) {
+            csv = new FileReaderMappingCSV();
+            cfg.attachCsv(csv);
+        }
+        return csv;
+    }
+
+    private FileReaderMappingXML getOrCreateXml(FileReaderConfig cfg) {
+        FileReaderMappingXML xml = cfg.getFileMappingXML();
+        if (xml == null) {
+            xml = new FileReaderMappingXML();
+            cfg.attachXml(xml);
+        }
+        return xml;
+    }
+
+    private java.util.List<String> normalizeDuplicateFields(DuplicateCheckUpdateDto update) {
+        if (update == null || update.getFields() == null || update.getFields().isEmpty()) {
+            throw new FileProcessingException("duplicateCheck fields are required");
+        }
+
+        java.util.List<String> fields = new java.util.ArrayList<>();
+        for (String field : update.getFields()) {
+            if (field == null) {
+                continue;
+            }
+            String trimmed = field.trim();
+            if (!trimmed.isEmpty()) {
+                fields.add(trimmed);
+            }
+        }
+
+        if (fields.isEmpty()) {
+            throw new FileProcessingException("duplicateCheck fields are required");
+        }
+        return fields;
+    }
+
+    private String normalizeName(String name, String label) {
+        if (name == null || name.isBlank()) {
+            throw new FileProcessingException(label + " name is required");
+        }
+        return name.trim();
+    }
+
+    private CsvColumnEntity findCsvColumnByName(FileReaderMappingCSV csv, String name) {
+        for (CsvColumnEntity column : csv.getColumns()) {
+            if (name.equals(column.getName())) {
+                return column;
+            }
+        }
+        return null;
+    }
+
+    private CsvColumnEntity findCsvColumnById(FileReaderMappingCSV csv, Long id) {
+        if (id == null) {
+            return null;
+        }
+        for (CsvColumnEntity column : csv.getColumns()) {
+            if (id.equals(column.getId())) {
+                return column;
+            }
+        }
+        return null;
+    }
+
+    private XmlFieldEntity findXmlFieldByName(FileReaderMappingXML xml, String name) {
+        for (XmlFieldEntity field : xml.getFields()) {
+            if (name.equals(field.getName())) {
+                return field;
+            }
+        }
+        return null;
+    }
+
+    private XmlFieldEntity findXmlFieldById(FileReaderMappingXML xml, Long id) {
+        if (id == null) {
+            return null;
+        }
+        for (XmlFieldEntity field : xml.getFields()) {
+            if (id.equals(field.getId())) {
+                return field;
+            }
+        }
+        return null;
+    }
+
+    private boolean hasCsvOrderIndexConflict(FileReaderMappingCSV csv, Integer orderIndex, Long excludeId) {
+        if (orderIndex == null) {
+            return false;
+        }
+        for (CsvColumnEntity column : csv.getColumns()) {
+            if (orderIndex.equals(column.getOrderIndex())
+                    && (excludeId == null || !excludeId.equals(column.getId()))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean hasXmlOrderIndexConflict(FileReaderMappingXML xml, Integer orderIndex, Long excludeId) {
+        if (orderIndex == null) {
+            return false;
+        }
+        for (XmlFieldEntity field : xml.getFields()) {
+            if (orderIndex.equals(field.getOrderIndex())
+                    && (excludeId == null || !excludeId.equals(field.getId()))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void applyCsvColumnUpdate(CsvColumnEntity target, FileReaderConfigDto.CsvColumnDto source) {
+        target.setOrderIndex(source.getOrderIndex());
+        target.setHeader(source.getHeader());
+        target.setType(parseFieldType(source.getType()));
+        target.setRequired(source.isRequired());
+        target.setNullable(source.isNullable());
+        target.setPattern(source.getPattern());
+    }
+
+    private void applyXmlFieldUpdate(XmlFieldEntity target, FileReaderConfigDto.XmlFieldDto source) {
+        target.setOrderIndex(source.getOrderIndex());
+        target.setTag(source.getTag());
+        target.setType(parseFieldType(source.getType()));
+        target.setRequired(source.isRequired());
+        target.setNullable(source.isNullable());
+        target.setPattern(source.getPattern());
+    }
+
+    private FieldType parseFieldType(String type) {
+        if (type == null || type.isBlank()) {
+            return null;
+        }
+        try {
+            return FieldType.valueOf(type.trim());
+        } catch (IllegalArgumentException e) {
+            throw new FileProcessingException("Invalid field type: " + type);
+        }
     }
 }

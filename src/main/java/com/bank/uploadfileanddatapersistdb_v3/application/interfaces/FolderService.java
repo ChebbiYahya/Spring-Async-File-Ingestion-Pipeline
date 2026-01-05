@@ -18,6 +18,10 @@ public interface FolderService {
 
     Path saveToInFolder(MultipartFile file);
 
+    boolean deleteFromIn(String fileName);
+
+    List<String> deleteAllFromIn();
+
     Path moveOneFromInToTreatmentWithTimestamp();
 
     Path moveTreatmentToBackup(Path treatmentFile);

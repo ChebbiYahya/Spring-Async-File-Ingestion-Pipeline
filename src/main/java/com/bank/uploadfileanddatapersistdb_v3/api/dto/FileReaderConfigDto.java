@@ -34,6 +34,7 @@ public class FileReaderConfigDto {
 
     @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
     public static class CsvColumnDto {
+        private Long id;
         private Integer orderIndex;
         private String name;
         private String header;
@@ -53,6 +54,7 @@ public class FileReaderConfigDto {
 
     @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
     public static class XmlFieldDto {
+        private Long id;
         private Integer orderIndex;
         private String name;
         private String tag;

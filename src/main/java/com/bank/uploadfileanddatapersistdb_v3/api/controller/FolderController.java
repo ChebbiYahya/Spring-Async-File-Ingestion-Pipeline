@@ -93,6 +93,48 @@ public class FolderController {
         return ResponseEntity.ok(out);
     }
 
+    @DeleteMapping(value = "/in/{fileName}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(
+            summary = "Delete one file from DATA_IN",
+            description = "Deletes a single file from DATA_IN by file name."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "File deleted successfully"),
+            @ApiResponse(responseCode = "404", description = "File not found", content = @Content)
+    })
+    public ResponseEntity<Map<String, Object>> deleteFromIn(
+            @Parameter(description = "File name in DATA_IN", required = true)
+            @PathVariable String fileName
+    ) {
+        boolean deleted = folderService.deleteFromIn(fileName);
+        if (!deleted) {
+            return ResponseEntity.notFound().build();
+        }
+
+        Map<String, Object> out = new HashMap<>();
+        out.put("deleted", fileName);
+        out.put("folders", folderStatus());
+        return ResponseEntity.ok(out);
+    }
+
+    @DeleteMapping(value = "/in", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(
+            summary = "Delete all files from DATA_IN",
+            description = "Deletes all regular files from DATA_IN."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Files deleted successfully")
+    })
+    public ResponseEntity<Map<String, Object>> deleteAllFromIn() {
+        List<String> deleted = folderService.deleteAllFromIn();
+
+        Map<String, Object> out = new HashMap<>();
+        out.put("deleted", deleted);
+        out.put("count", deleted.size());
+        out.put("folders", folderStatus());
+        return ResponseEntity.ok(out);
+    }
+
     @GetMapping("/status")
     @Operation(
             summary = "Get DATA folders status",

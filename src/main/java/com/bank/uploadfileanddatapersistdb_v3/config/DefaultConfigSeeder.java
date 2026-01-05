@@ -178,6 +178,44 @@ public class DefaultConfigSeeder {
                                             .required(true)
                                             .nullable(false)
                                             .pattern("^[A-Za-zÀ-ÿ' -]{2,100}$")
+                                            .build(),
+
+                                    FileReaderConfigDto.XmlFieldDto.builder()
+                                            .orderIndex(4)
+                                            .name("position")
+                                            .tag("position")
+                                            .type("STRING")
+                                            .required(false)
+                                            .nullable(true)
+                                            .build(),
+
+                                    FileReaderConfigDto.XmlFieldDto.builder()
+                                            .orderIndex(5)
+                                            .name("department")
+                                            .tag("department")
+                                            .type("STRING")
+                                            .required(false)
+                                            .nullable(true)
+                                            .build(),
+
+                                    FileReaderConfigDto.XmlFieldDto.builder()
+                                            .orderIndex(6)
+                                            .name("hireDate")
+                                            .tag("hireDate")
+                                            .type("LOCAL_DATE")
+                                            .required(false)
+                                            .nullable(true)
+                                            .pattern("^\\d{4}-\\d{2}-\\d{2}$")
+                                            .build(),
+
+                                    FileReaderConfigDto.XmlFieldDto.builder()
+                                            .orderIndex(7)
+                                            .name("salary")
+                                            .tag("salary")
+                                            .type("DECIMAL")
+                                            .required(false)
+                                            .nullable(true)
+                                            .pattern("^-?\\d+(\\.\\d+)?$")
                                             .build()
                             ))
                             .build())

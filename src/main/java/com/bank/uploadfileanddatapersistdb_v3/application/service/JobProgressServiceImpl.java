@@ -33,6 +33,7 @@ public class JobProgressServiceImpl implements JobProgressService {
         int totalRecords;
         int processedRecords;
         Instant startedAt;
+        Long estimatedTotalSeconds;
     }
 
     /**
@@ -59,6 +60,7 @@ public class JobProgressServiceImpl implements JobProgressService {
         s.totalRecords = Math.max(0, totalRecords);
         s.processedRecords = 0;
         s.startedAt = Instant.now();
+        s.estimatedTotalSeconds = null;
 
         store.put(id, s);
         return id;
@@ -119,9 +121,28 @@ public class JobProgressServiceImpl implements JobProgressService {
                         ? 0L
                         : (long) Math.ceil(remaining / rate);
             }
+        } else if (!"RUNNING".equals(s.status)) {
+            timeLeft = 0L;
         }
 
-        // 4) Mapping vers DTO (via mapper)
+        // 4) Total time (estimated upfront when possible)
+        long totalTimeSeconds = 0L;
+        if (s.estimatedTotalSeconds != null) {
+            totalTimeSeconds = s.estimatedTotalSeconds;
+        } else if ("RUNNING".equals(s.status)
+                && timeLeft != null
+                && s.totalRecords > 0
+                && s.processedRecords > 0
+                && elapsedSec > 0) {
+            long estimate = elapsedSec + timeLeft;
+            s.estimatedTotalSeconds = estimate;
+            totalTimeSeconds = estimate;
+        } else if ("FINISHED".equals(s.status)) {
+            s.estimatedTotalSeconds = elapsedSec;
+            totalTimeSeconds = elapsedSec;
+        }
+
+        // 5) Mapping vers DTO (via mapper)
         return mapper.toDto(
                 jobId,
                 s.status,
@@ -129,7 +150,7 @@ public class JobProgressServiceImpl implements JobProgressService {
                 s.processedRecords,
                 percent,
                 timeLeft,
-                elapsedSec
+                totalTimeSeconds
         );
     }
 }

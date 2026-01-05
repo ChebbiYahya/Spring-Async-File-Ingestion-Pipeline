@@ -78,7 +78,7 @@ public class LogChargementController {
     public List<LogChargementSummaryDto> getAllLogs(
             @Parameter(
                     description = "Optional filter: match logs whose fileName contains this value (case-insensitive).",
-                    example = "employees"
+                    example = "big_data_2026-01-04_17-45-26.csv"
             )
             @RequestParam(name = "fileName", required = false) String fileName,
 
