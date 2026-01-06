@@ -1,4 +1,5 @@
 package com.bank.uploadfileanddatapersistdb_v3.api.exception;
+// Modele d'erreur API.
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

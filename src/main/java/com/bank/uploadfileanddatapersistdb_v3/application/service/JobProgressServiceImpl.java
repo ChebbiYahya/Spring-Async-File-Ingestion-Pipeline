@@ -1,4 +1,5 @@
 package com.bank.uploadfileanddatapersistdb_v3.application.service;
+// Suivi en memoire de l'avancement d'un job.
 
 import com.bank.uploadfileanddatapersistdb_v3.api.dto.JobProgressDto;
 import com.bank.uploadfileanddatapersistdb_v3.api.mapper.JobProgressMapper;

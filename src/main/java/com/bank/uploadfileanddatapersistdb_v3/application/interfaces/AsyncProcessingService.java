@@ -1,4 +1,5 @@
 package com.bank.uploadfileanddatapersistdb_v3.application.interfaces;
+// Interface pour demarrer et executer un traitement asynchrone.
 
 /**
  * Interface defining asynchronous processing operations.

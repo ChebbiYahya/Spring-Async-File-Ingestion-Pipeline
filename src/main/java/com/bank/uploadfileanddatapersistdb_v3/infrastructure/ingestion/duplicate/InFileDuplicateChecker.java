@@ -1,4 +1,5 @@
 package com.bank.uploadfileanddatapersistdb_v3.infrastructure.ingestion.duplicate;
+// Couche infrastructure: parsing, persistence, mapping, validation et filesystem.
 
 import java.util.HashSet;
 import java.util.Set;

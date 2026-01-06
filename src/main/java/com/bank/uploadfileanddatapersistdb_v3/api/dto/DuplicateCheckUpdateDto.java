@@ -1,4 +1,5 @@
 package com.bank.uploadfileanddatapersistdb_v3.api.dto;
+// DTO pour les champs de duplication.
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

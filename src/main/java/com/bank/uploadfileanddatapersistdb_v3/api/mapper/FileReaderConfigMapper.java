@@ -1,4 +1,5 @@
 package com.bank.uploadfileanddatapersistdb_v3.api.mapper;
+// Mapper entite <-> DTO configuration.
 
 import com.bank.uploadfileanddatapersistdb_v3.api.dto.FileReaderConfigDto;
 import com.bank.uploadfileanddatapersistdb_v3.domain.model.entity.*;

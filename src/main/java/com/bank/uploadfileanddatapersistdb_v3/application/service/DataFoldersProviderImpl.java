@@ -1,4 +1,5 @@
 package com.bank.uploadfileanddatapersistdb_v3.application.service;
+// Resolution des chemins DATA_* a partir de la config DB.
 
 import com.bank.uploadfileanddatapersistdb_v3.application.interfaces.DataFoldersProvider;
 import com.bank.uploadfileanddatapersistdb_v3.application.interfaces.FileReaderConfigService;

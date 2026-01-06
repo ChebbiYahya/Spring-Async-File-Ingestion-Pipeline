@@ -1,4 +1,5 @@
 package com.bank.uploadfileanddatapersistdb_v3.application.service;
+// Compte les records dans un fichier CSV/XML.
 
 import com.bank.uploadfileanddatapersistdb_v3.application.interfaces.FileRecordCounter;
 import com.bank.uploadfileanddatapersistdb_v3.domain.exception.FileProcessingException;

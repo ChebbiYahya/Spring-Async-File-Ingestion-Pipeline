@@ -1,4 +1,5 @@
 package com.bank.uploadfileanddatapersistdb_v3.infrastructure.ingestion.parser;
+// Couche infrastructure: parsing, persistence, mapping, validation et filesystem.
 
 import com.bank.uploadfileanddatapersistdb_v3.domain.exception.SchemaValidationException;
 import com.bank.uploadfileanddatapersistdb_v3.infrastructure.ingestion.validation.ErrorCode;

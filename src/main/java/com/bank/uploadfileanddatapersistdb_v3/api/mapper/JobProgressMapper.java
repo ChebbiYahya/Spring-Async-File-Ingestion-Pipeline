@@ -1,4 +1,5 @@
 package com.bank.uploadfileanddatapersistdb_v3.api.mapper;
+// Mapper pour JobProgressDto.
 
 import com.bank.uploadfileanddatapersistdb_v3.api.dto.JobProgressDto;
 import org.springframework.stereotype.Component;

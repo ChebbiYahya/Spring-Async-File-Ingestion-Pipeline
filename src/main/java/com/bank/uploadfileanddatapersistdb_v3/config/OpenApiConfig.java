@@ -1,4 +1,5 @@
 package com.bank.uploadfileanddatapersistdb_v3.config;
+// Configuration OpenAPI/Swagger pour documenter l'API.
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;

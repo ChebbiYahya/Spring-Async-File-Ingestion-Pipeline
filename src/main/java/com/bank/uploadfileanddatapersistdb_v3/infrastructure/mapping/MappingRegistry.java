@@ -1,4 +1,5 @@
 package com.bank.uploadfileanddatapersistdb_v3.infrastructure.mapping;
+// Couche infrastructure: parsing, persistence, mapping, validation et filesystem.
 
 import com.bank.uploadfileanddatapersistdb_v3.application.interfaces.FileReaderConfigService;
 import com.bank.uploadfileanddatapersistdb_v3.domain.model.entity.FileReaderConfig;

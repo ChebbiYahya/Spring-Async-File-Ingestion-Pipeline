@@ -1,4 +1,5 @@
 package com.bank.uploadfileanddatapersistdb_v3.application.interfaces;
+// Interface pour gerer les fichiers dans DATA_*
 
 import org.springframework.web.multipart.MultipartFile;
 

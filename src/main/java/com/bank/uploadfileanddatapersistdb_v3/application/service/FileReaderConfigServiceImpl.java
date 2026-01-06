@@ -1,4 +1,5 @@
 package com.bank.uploadfileanddatapersistdb_v3.application.service;
+// Gestion transactionnelle des configurations de lecture.
 
 import com.bank.uploadfileanddatapersistdb_v3.api.dto.DuplicateCheckUpdateDto;
 import com.bank.uploadfileanddatapersistdb_v3.api.dto.FileReaderConfigDto;

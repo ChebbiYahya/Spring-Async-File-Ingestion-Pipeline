@@ -1,4 +1,5 @@
 package com.bank.uploadfileanddatapersistdb_v3.infrastructure.mapping.model;
+// Couche infrastructure: parsing, persistence, mapping, validation et filesystem.
 
 import com.bank.uploadfileanddatapersistdb_v3.infrastructure.mapping.model.rules.CsvColumnRule;
 import lombok.AllArgsConstructor;

@@ -1,4 +1,5 @@
 package com.bank.uploadfileanddatapersistdb_v3.api.dto;
+// DTO pour options CSV.
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

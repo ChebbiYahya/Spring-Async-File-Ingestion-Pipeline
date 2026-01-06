@@ -1,4 +1,5 @@
 package com.bank.uploadfileanddatapersistdb_v3.infrastructure.filesystem;
+// Couche infrastructure: parsing, persistence, mapping, validation et filesystem.
 
 import org.springframework.web.multipart.MultipartFile;
 

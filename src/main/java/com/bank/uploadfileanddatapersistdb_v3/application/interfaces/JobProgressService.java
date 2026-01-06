@@ -1,4 +1,5 @@
 package com.bank.uploadfileanddatapersistdb_v3.application.interfaces;
+// Interface pour suivre la progression d'un job.
 
 import com.bank.uploadfileanddatapersistdb_v3.api.dto.JobProgressDto;
 

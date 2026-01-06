@@ -1,4 +1,5 @@
 package com.bank.uploadfileanddatapersistdb_v3.application.interfaces;
+// Interface pour gerer la config de lecture des fichiers.
 
 import com.bank.uploadfileanddatapersistdb_v3.api.dto.DuplicateCheckUpdateDto;
 import com.bank.uploadfileanddatapersistdb_v3.api.dto.FileReaderConfigDto;

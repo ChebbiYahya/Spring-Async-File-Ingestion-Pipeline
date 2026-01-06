@@ -1,4 +1,5 @@
 package com.bank.uploadfileanddatapersistdb_v3.api.controller;
+// Controleur REST pour gerer les dossiers et uploads.
 
 import com.bank.uploadfileanddatapersistdb_v3.application.interfaces.FolderService;
 import com.bank.uploadfileanddatapersistdb_v3.domain.exception.InvalidFileFormatException;

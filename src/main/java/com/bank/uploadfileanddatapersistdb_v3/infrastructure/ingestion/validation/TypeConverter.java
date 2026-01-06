@@ -1,4 +1,5 @@
 package com.bank.uploadfileanddatapersistdb_v3.infrastructure.ingestion.validation;
+// Couche infrastructure: parsing, persistence, mapping, validation et filesystem.
 
 import java.math.BigDecimal;
 import java.time.LocalDate;

@@ -1,4 +1,5 @@
 package com.bank.uploadfileanddatapersistdb_v3.domain.exception;
+// Couche domain: concepts metier, exceptions, enums et entites.
 
 /**
  * Thrown when a value does not match the expected type.

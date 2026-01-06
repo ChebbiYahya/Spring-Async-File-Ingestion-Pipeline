@@ -1,4 +1,5 @@
 package com.bank.uploadfileanddatapersistdb_v3.infrastructure.persistence.custom;
+// Couche infrastructure: parsing, persistence, mapping, validation et filesystem.
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;

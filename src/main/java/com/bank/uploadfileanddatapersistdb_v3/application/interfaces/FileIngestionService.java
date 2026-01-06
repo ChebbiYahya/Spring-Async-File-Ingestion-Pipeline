@@ -1,4 +1,5 @@
 package com.bank.uploadfileanddatapersistdb_v3.application.interfaces;
+// Interface pour l'ingestion de fichiers CSV/XML.
 
 import org.springframework.web.multipart.MultipartFile;
 

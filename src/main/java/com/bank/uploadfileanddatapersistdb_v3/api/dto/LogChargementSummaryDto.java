@@ -1,4 +1,5 @@
 package com.bank.uploadfileanddatapersistdb_v3.api.dto;
+// DTO resume de log.
 
 import com.bank.uploadfileanddatapersistdb_v3.domain.model.enums.LogStatus;
 import lombok.*;

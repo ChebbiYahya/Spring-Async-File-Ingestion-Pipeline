@@ -1,4 +1,5 @@
 package com.bank.uploadfileanddatapersistdb_v3.application.service;
+// Orchestration du traitement batch asynchrone.
 
 import com.bank.uploadfileanddatapersistdb_v3.application.interfaces.*;
 import lombok.RequiredArgsConstructor;
@@ -62,6 +63,11 @@ public class AsyncProcessingServiceImpl implements AsyncProcessingService {
     private final JobProgressService jobProgressService;
 
     /**
+     * Stocke le resultat final par job (fichiers traites / echoues).
+     */
+    private final JobResultService jobResultService;
+
+    /**
      * Compte le nombre d’enregistrements dans un fichier CSV/XML
      * sans charger tout en mémoire (streaming).
      * Sert à calculer totalRecords au début du job.
@@ -89,7 +95,9 @@ public class AsyncProcessingServiceImpl implements AsyncProcessingService {
         int totalRecords = countTotalRecordsInDataIn(id);
 
         // Création du job (status RUNNING) + stockage du totalRecords
-        return jobProgressService.start(totalRecords);
+        String jobId = jobProgressService.start(totalRecords);
+        jobResultService.start(jobId);
+        return jobId;
     }
 
     /**
@@ -157,18 +165,25 @@ public class AsyncProcessingServiceImpl implements AsyncProcessingService {
                         // 3) Type non supporté => on le met en FAILED.
                         // Note : on ne fait pas incrementProcessed car ce fichier
                         // ne fait normalement pas partie du "totalRecords" (countRecords renvoie 0).
+                        jobResultService.addFailed(jobId, treatmentFile.getFileName().toString(), "Unsupported file type");
                         folderService.moveTreatmentToFailed(treatmentFile);
                         continue;
                     }
 
                     // 4) Si ingestion OK => on archive en BACKUP
                     folderService.moveTreatmentToBackup(treatmentFile);
+                    jobResultService.addTreated(jobId, treatmentFile.getFileName().toString());
 
                 } catch (Exception ex) {
                     // Erreur sur ce fichier : on log et on le déplace en FAILED
                     org.slf4j.LoggerFactory.getLogger(AsyncProcessingServiceImpl.class)
                             .error("Processing failed for file {}: {}", treatmentFile.getFileName(), ex.getMessage(), ex);
 
+                    jobResultService.addFailed(
+                            jobId,
+                            treatmentFile.getFileName().toString(),
+                            ex.getMessage()
+                    );
                     folderService.moveTreatmentToFailed(treatmentFile);
 
                     // Important : on continue la boucle => le job traite les autres fichiers

@@ -1,4 +1,5 @@
 package com.bank.uploadfileanddatapersistdb_v3.application.service;
+// Orchestrateur d'ingestion CSV/XML.
 
 import com.bank.uploadfileanddatapersistdb_v3.application.interfaces.FileIngestionService;
 import com.bank.uploadfileanddatapersistdb_v3.domain.exception.StreamProcessingException;

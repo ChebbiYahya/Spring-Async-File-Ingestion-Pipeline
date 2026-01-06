@@ -1,4 +1,5 @@
 package com.bank.uploadfileanddatapersistdb_v3.application.service;
+// Service metier des logs de chargement.
 
 import com.bank.uploadfileanddatapersistdb_v3.application.interfaces.LogChargementService;
 import com.bank.uploadfileanddatapersistdb_v3.domain.exception.LogChargementNotFoundException;

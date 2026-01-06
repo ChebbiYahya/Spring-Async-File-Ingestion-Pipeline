@@ -1,4 +1,5 @@
 package com.bank.uploadfileanddatapersistdb_v3.application.interfaces;
+// Interface pour les logs de chargement.
 
 import com.bank.uploadfileanddatapersistdb_v3.domain.model.entity.LogChargement;
 import com.bank.uploadfileanddatapersistdb_v3.domain.model.enums.LineStatus;

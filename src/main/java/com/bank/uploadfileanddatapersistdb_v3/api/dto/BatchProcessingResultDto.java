@@ -1,4 +1,5 @@
 package com.bank.uploadfileanddatapersistdb_v3.api.dto;
+// DTO de resultat pour un batch.
 
 import lombok.*;
 

@@ -1,4 +1,5 @@
 package com.bank.uploadfileanddatapersistdb_v3.api.controller;
+// Controleur REST pour consulter les logs de chargement.
 
 import com.bank.uploadfileanddatapersistdb_v3.api.dto.LogChargementSummaryDto;
 import com.bank.uploadfileanddatapersistdb_v3.api.dto.LogChargementWithDetailsDto;

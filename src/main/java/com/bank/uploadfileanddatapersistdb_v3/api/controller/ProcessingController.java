@@ -1,7 +1,10 @@
 package com.bank.uploadfileanddatapersistdb_v3.api.controller;
+// Controleur REST pour demarrer le traitement et suivre le resultat.
 
+import com.bank.uploadfileanddatapersistdb_v3.api.dto.FinalResultDto;
 import com.bank.uploadfileanddatapersistdb_v3.application.interfaces.AsyncProcessingService;
 import com.bank.uploadfileanddatapersistdb_v3.application.interfaces.JobProgressService;
+import com.bank.uploadfileanddatapersistdb_v3.application.interfaces.JobResultService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -52,6 +55,11 @@ public class ProcessingController {
      * et permet de récupérer : percent, timeLeft, processedRecords, etc.
      */
     private final JobProgressService jobProgressService;
+
+    /**
+     * Stocke le resultat final par job (fichiers traites / echoues).
+     */
+    private final JobResultService jobResultService;
 
     /**
      * POST /process/start-async
@@ -142,6 +150,46 @@ public class ProcessingController {
         }
 
         // Sinon retourne le DTO complet (status, percent, ETA, etc.)
+        return ResponseEntity.ok(dto);
+    }
+
+    /**
+     * GET /process/result/{jobId}
+     *
+     * Retourne le resultat final (fichiers traites + fichiers echoues).
+     */
+    @Operation(
+            summary = "Get final result",
+            description = "Returns final result with treated and failed files for a job."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Final result retrieved successfully",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE)
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Job not found",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(example = "{\"error\":\"jobId not found\"}")
+                    )
+            )
+    })
+    @GetMapping(value = "/result/{jobId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> result(
+            @Parameter(
+                    description = "Job identifier returned by /process/start-async",
+                    example = "8a3f1b2c-1c1e-4f0b-9c7f-3a2a1c8d9e10",
+                    required = true
+            )
+            @PathVariable String jobId
+    ) {
+        FinalResultDto dto = jobResultService.get(jobId);
+        if (dto == null) {
+            return ResponseEntity.status(404).body(Map.of("error", "jobId not found"));
+        }
         return ResponseEntity.ok(dto);
     }
 }

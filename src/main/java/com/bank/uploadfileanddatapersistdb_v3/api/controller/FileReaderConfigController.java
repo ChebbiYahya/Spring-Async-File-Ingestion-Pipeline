@@ -1,4 +1,5 @@
 package com.bank.uploadfileanddatapersistdb_v3.api.controller;
+// Controleur REST pour gerer la configuration de lecture.
 
 import com.bank.uploadfileanddatapersistdb_v3.api.dto.DuplicateCheckUpdateDto;
 import com.bank.uploadfileanddatapersistdb_v3.api.dto.FileReaderConfigDto;

@@ -1,4 +1,5 @@
 package com.bank.uploadfileanddatapersistdb_v3.api.dto;
+// DTO pour mettre a jour la meta config.
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

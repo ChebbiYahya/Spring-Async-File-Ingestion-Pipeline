@@ -1,4 +1,5 @@
 package com.bank.uploadfileanddatapersistdb_v3.application.interfaces;
+// Interface pour compter les enregistrements d'un fichier.
 
 import java.nio.file.Path;
 

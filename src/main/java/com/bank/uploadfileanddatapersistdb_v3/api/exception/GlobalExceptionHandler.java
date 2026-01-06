@@ -1,4 +1,5 @@
 package com.bank.uploadfileanddatapersistdb_v3.api.exception;
+// Gestionnaire global des exceptions API.
 
 import com.bank.uploadfileanddatapersistdb_v3.domain.exception.*;
 import jakarta.servlet.http.HttpServletRequest;

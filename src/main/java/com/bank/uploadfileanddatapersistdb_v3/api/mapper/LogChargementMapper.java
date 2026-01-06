@@ -1,4 +1,5 @@
 package com.bank.uploadfileanddatapersistdb_v3.api.mapper;
+// Mapper entite <-> DTO log.
 
 import com.bank.uploadfileanddatapersistdb_v3.api.dto.LogChargementDetailDto;
 import com.bank.uploadfileanddatapersistdb_v3.api.dto.LogChargementSummaryDto;

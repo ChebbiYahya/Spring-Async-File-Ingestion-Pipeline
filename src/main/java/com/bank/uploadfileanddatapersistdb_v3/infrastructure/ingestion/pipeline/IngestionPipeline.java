@@ -1,4 +1,5 @@
 package com.bank.uploadfileanddatapersistdb_v3.infrastructure.ingestion.pipeline;
+// Couche infrastructure: parsing, persistence, mapping, validation et filesystem.
 
 import com.bank.uploadfileanddatapersistdb_v3.application.interfaces.LogChargementService;
 import com.bank.uploadfileanddatapersistdb_v3.domain.model.entity.LogChargement;

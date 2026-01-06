@@ -1,4 +1,5 @@
 package com.bank.uploadfileanddatapersistdb_v3.domain.model.entity;
+// Couche domain: concepts metier, exceptions, enums et entites.
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

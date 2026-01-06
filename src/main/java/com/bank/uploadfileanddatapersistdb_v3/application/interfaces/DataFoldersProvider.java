@@ -1,4 +1,5 @@
 package com.bank.uploadfileanddatapersistdb_v3.application.interfaces;
+// Interface pour resoudre les chemins des dossiers DATA_* depuis la config.
 
 import com.bank.uploadfileanddatapersistdb_v3.domain.model.entity.FileReaderConfig;
 

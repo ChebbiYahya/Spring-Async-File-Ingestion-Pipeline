@@ -1,4 +1,5 @@
 package com.bank.uploadfileanddatapersistdb_v3.domain.model.enums;
+// Couche domain: concepts metier, exceptions, enums et entites.
 
 /**
  * Overall status of a file import job.
