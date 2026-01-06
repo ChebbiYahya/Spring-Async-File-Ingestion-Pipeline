@@ -6,8 +6,8 @@ import com.bank.uploadfileanddatapersistdb_v3.infrastructure.filesystem.PathMult
 import com.bank.uploadfileanddatapersistdb_v3.infrastructure.ingestion.parser.CsvRecordReader;
 import com.bank.uploadfileanddatapersistdb_v3.infrastructure.ingestion.parser.RecordReader;
 import com.bank.uploadfileanddatapersistdb_v3.infrastructure.ingestion.parser.XmlRecordReader;
-import com.bank.uploadfileanddatapersistdb_v3.infrastructure.ingestion.persistence.EmployeeDuplicateDbChecker;
-import com.bank.uploadfileanddatapersistdb_v3.infrastructure.ingestion.persistence.EmployeeRecordPersister;
+import com.bank.uploadfileanddatapersistdb_v3.infrastructure.ingestion.persistence.GenericDuplicateDbChecker;
+import com.bank.uploadfileanddatapersistdb_v3.infrastructure.ingestion.persistence.GenericRecordPersister;
 import com.bank.uploadfileanddatapersistdb_v3.infrastructure.ingestion.pipeline.IngestionPipeline;
 import com.bank.uploadfileanddatapersistdb_v3.infrastructure.mapping.MappingRegistry;
 import com.bank.uploadfileanddatapersistdb_v3.infrastructure.mapping.model.CsvSchema;
@@ -53,14 +53,14 @@ public class FileIngestionServiceImpl implements FileIngestionService {
     private final IngestionPipeline pipeline;
 
     /**
-     * Persiste une ligne validée sous forme d'entité Employee en base.
+     * Persiste une ligne validee pour l'entite cible.
      */
-    private final EmployeeRecordPersister employeePersister;
+    private final GenericRecordPersister recordPersister;
 
     /**
      * Vérifie si le record (selon les champs duplicateCheck) existe déjà en DB.
      */
-    private final EmployeeDuplicateDbChecker employeeDuplicateDbChecker;
+    private final GenericDuplicateDbChecker duplicateDbChecker;
 
     /**
      * Ingestion d’un fichier CSV (Path) avec reporting de progression.
@@ -75,6 +75,7 @@ public class FileIngestionServiceImpl implements FileIngestionService {
 
         // 1) Charger la config/mapping CSV depuis la DB
         CsvSchema schema = mappingRegistry.loadCsv(configId);
+        Class<?> entityClass = resolveEntityClass(configId, schema.getEntityClassName());
 
         // 2) Adapter Path -> MultipartFile pour réutiliser CsvRecordReader
         // 3) RecordReader est AutoCloseable => try-with-resources ferme parser/streams
@@ -86,8 +87,8 @@ public class FileIngestionServiceImpl implements FileIngestionService {
                     schema.getDuplicateCheck(),           // champs de détection doublons
                     rr.iterator(),                        // records (Map<String,String>) en streaming
                     schema.getColumns(),                  // règles de validation (CSV)
-                    record -> employeePersister.persist(record, schema.getColumns()),          // persister un record validé
-                    (record, fields) -> employeeDuplicateDbChecker.exists(record, fields, schema.getColumns()), // doublon DB
+                    record -> recordPersister.persist(record, schema.getColumns(), entityClass),          // persister un record validé
+                    (record, fields) -> duplicateDbChecker.exists(record, fields, schema.getColumns(), entityClass), // doublon DB
                     progressReporter                      // callback progression
             );
 
@@ -110,6 +111,7 @@ public class FileIngestionServiceImpl implements FileIngestionService {
 
         // 1) Charger la config/mapping XML depuis la DB
         XmlSchema schema = mappingRegistry.loadXml(configId);
+        Class<?> entityClass = resolveEntityClass(configId, schema.getEntityClassName());
 
         // 2) Adapter Path -> MultipartFile pour réutiliser XmlRecordReader
         try (RecordReader rr = new XmlRecordReader(new PathMultipartFile(filePath), schema)) {
@@ -120,13 +122,30 @@ public class FileIngestionServiceImpl implements FileIngestionService {
                     schema.getDuplicateCheck(),           // champs de détection doublons
                     rr.iterator(),                        // records (Map<String,String>) en streaming
                     schema.getFields(),                   // règles de validation (XML)
-                    record -> employeePersister.persist(record, schema.getFields()),           // persister un record validé
-                    (record, fields) -> employeeDuplicateDbChecker.exists(record, fields, schema.getFields()), // doublon DB
+                    record -> recordPersister.persist(record, schema.getFields(), entityClass),           // persister un record validé
+                    (record, fields) -> duplicateDbChecker.exists(record, fields, schema.getFields(), entityClass), // doublon DB
                     progressReporter                      // callback progression
             );
 
         } catch (Exception e) {
             throw new StreamProcessingException("XML ingestion failed: " + e.getMessage(), e);
+        }
+    }
+
+    private Class<?> resolveEntityClass(String configId, String entityClassName) {
+        if (entityClassName == null || entityClassName.isBlank()) {
+            throw new StreamProcessingException(
+                    "Missing entityClassName for config: " + configId + ". Update the file reader config in DB.",
+                    new IllegalStateException("entityClassName is blank")
+            );
+        }
+        try {
+            return Class.forName(entityClassName.trim());
+        } catch (ClassNotFoundException e) {
+            throw new StreamProcessingException(
+                    "Entity class not found: " + entityClassName + " for config: " + configId,
+                    e
+            );
         }
     }
 }

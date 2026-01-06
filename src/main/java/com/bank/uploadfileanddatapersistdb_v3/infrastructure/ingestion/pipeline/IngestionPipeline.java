@@ -80,7 +80,7 @@ public class IngestionPipeline {
      * @param duplicateCheck liste des champs qui définissent un doublon (ex: ["id","firstName","lastName"])
      * @param rawRecords iterator des records bruts (valeurs String)
      * @param rules règles de mapping/validation (CSV columns ou XML fields)
-     * @param persister stratégie de persistance (ex: save Employee)
+     * @param persister stratégie de persistance (ex: save entity)
      * @param dbChecker stratégie doublon DB (ex: existsByFields)
      * @param progressReporter callback optionnel, appelé après chaque record
      *
@@ -190,7 +190,7 @@ public class IngestionPipeline {
      * et une implémentation concrète décide comment le sauvegarder.
      *
      * Exemple :
-     * - persister.persist(record) -> mapper vers Employee -> repository.save(employee)
+     * - persister.persist(record) -> mapper vers entite -> repository.save(employee)
      */
     public interface RecordPersister {
         void persist(Map<String, String> record);

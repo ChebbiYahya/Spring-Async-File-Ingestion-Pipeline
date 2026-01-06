@@ -11,6 +11,7 @@ public class FileReaderConfigDto {
     private String idConfigFichier;
     private String description;
     private String modeChargement;
+    private String entityClassName;
     private PathsDto paths;
     private FileReaderMappingCsvDto fileMappingCSV;
     private FileReaderMappingXmlDto fileMappingXML;

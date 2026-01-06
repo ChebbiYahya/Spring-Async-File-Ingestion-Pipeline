@@ -14,5 +14,6 @@ import lombok.Setter;
 public class FileReaderConfigMetaUpdateDto {
     private String description;
     private String modeChargement;
+    private String entityClassName;
     private FileReaderConfigDto.PathsDto paths;
 }

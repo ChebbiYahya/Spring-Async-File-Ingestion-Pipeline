@@ -12,9 +12,6 @@ import lombok.Setter;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-/**
- * JPA entity representing an employee persisted in DB (table: employees).
- */
 @Entity
 @Table(name = "employees")
 @Getter

@@ -30,6 +30,7 @@ public class FileReaderConfigMapper {
                 .idConfigFichier(cfg.getIdConfigFichier())
                 .description(cfg.getDescription())
                 .modeChargement(cfg.getModeChargement())
+                .entityClassName(cfg.getEntityClassName())
                 .build();
 
         // Paths (Embeddable -> DTO)
@@ -114,6 +115,7 @@ public class FileReaderConfigMapper {
 
         cfg.setDescription(dto.getDescription());
         cfg.setModeChargement(dto.getModeChargement());
+        cfg.setEntityClassName(dto.getEntityClassName());
 
         // Paths
         if (dto.getPaths() != null) {

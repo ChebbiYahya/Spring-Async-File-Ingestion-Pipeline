@@ -20,6 +20,8 @@ public class FileReaderConfig {
     @Column(name = "mode_chargement", length = 30)
     private String modeChargement; // ex: "WEB"
 
+    @Column(name = "entity_class_name", length = 255)
+    private String entityClassName;
 
     private DataFoldersEmbeddable paths;
 

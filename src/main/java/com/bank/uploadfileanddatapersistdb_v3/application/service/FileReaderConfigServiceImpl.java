@@ -184,6 +184,9 @@ public class FileReaderConfigServiceImpl implements FileReaderConfigService {
         if (update.getModeChargement() != null) {
             cfg.setModeChargement(update.getModeChargement());
         }
+        if (update.getEntityClassName() != null) {
+            cfg.setEntityClassName(update.getEntityClassName());
+        }
         if (update.getPaths() != null) {
             DataFoldersEmbeddable paths = cfg.getPaths();
             if (paths == null) {

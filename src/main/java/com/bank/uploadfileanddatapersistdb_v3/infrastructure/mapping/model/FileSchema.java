@@ -16,4 +16,5 @@ import java.util.List;
 @AllArgsConstructor
 public class FileSchema {
     private List<String> duplicateCheck;
+    private String entityClassName;
 }

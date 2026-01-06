@@ -36,17 +36,6 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(apiError);
     }
 
-    @ExceptionHandler(EmployeeNotFoundException.class)
-    public ResponseEntity<ApiError> handleEmployeeNotFound(EmployeeNotFoundException ex, HttpServletRequest request) {
-        ApiError apiError = ApiError.of(
-                HttpStatus.NOT_FOUND.value(),
-                "Employee not found",
-                ex.getMessage(),
-                request.getRequestURI()
-        );
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(apiError);
-    }
-
     @ExceptionHandler(MissingRequiredFieldException.class)
     public ResponseEntity<ApiError> handleMissingRequiredField(MissingRequiredFieldException ex, HttpServletRequest request) {
         ApiError apiError = ApiError.of(

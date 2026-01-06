@@ -1,0 +1,148 @@
+{
+  "idConfigFichier": "EMPLOYEES",
+  "description": "Employees mapping (DB managed)",
+  "modeChargement": "WEB",
+  "entityClassName": "com.bank.uploadfileanddatapersistdb_v3.domain.model.entity.Employee",
+  "paths": {
+    "baseDir": "D:/DATA",
+    "inDir": "DATA_IN",
+    "treatmentDir": "DATA_TREATMENT",
+    "backupDir": "DATA_BACKUP",
+    "failedDir": "DATA_FAILED"
+  },
+  "fileMappingCSV": {
+    "delimiter": ",",
+    "hasHeader": true,
+    "duplicateCheck": ["id", "firstName", "lastName"],
+    "columns": [
+      {
+        "orderIndex": 1,
+        "name": "id",
+        "header": "id",
+        "type": "LONG",
+        "required": true,
+        "nullable": false,
+        "pattern": "^[0-9]+$"
+      },
+      {
+        "orderIndex": 2,
+        "name": "firstName",
+        "header": "firstName",
+        "type": "STRING",
+        "required": true,
+        "nullable": false,
+        "pattern": "^[A-Za-zÀ-ÿ' -]{2,100}$"
+      },
+      {
+        "orderIndex": 3,
+        "name": "lastName",
+        "header": "lastName",
+        "type": "STRING",
+        "required": true,
+        "nullable": false,
+        "pattern": "^[A-Za-zÀ-ÿ' -]{2,100}$"
+      },
+      {
+        "orderIndex": 4,
+        "name": "position",
+        "header": "position",
+        "type": "STRING",
+        "required": false,
+        "nullable": true
+      },
+      {
+        "orderIndex": 5,
+        "name": "department",
+        "header": "department",
+        "type": "STRING",
+        "required": false,
+        "nullable": true
+      },
+      {
+        "orderIndex": 6,
+        "name": "hireDate",
+        "header": "hireDate",
+        "type": "LOCAL_DATE",
+        "required": false,
+        "nullable": true,
+        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+      },
+      {
+        "orderIndex": 7,
+        "name": "salary",
+        "header": "salary",
+        "type": "DECIMAL",
+        "required": false,
+        "nullable": true,
+        "pattern": "^-?\\d+(\\.\\d+)?$"
+      }
+    ]
+  },
+  "fileMappingXML": {
+    "rootElement": "employees",
+    "recordElement": "employee",
+    "duplicateCheck": ["id", "firstName", "lastName"],
+    "fields": [
+      {
+        "orderIndex": 1,
+        "name": "id",
+        "tag": "id",
+        "type": "LONG",
+        "required": true,
+        "nullable": false
+      },
+      {
+        "orderIndex": 2,
+        "name": "firstName",
+        "tag": "firstName",
+        "type": "STRING",
+        "required": true,
+        "nullable": false,
+        "pattern": "^[A-Za-zÀ-ÿ' -]{2,100}$"
+      },
+      {
+        "orderIndex": 3,
+        "name": "lastName",
+        "tag": "lastName",
+        "type": "STRING",
+        "required": true,
+        "nullable": false,
+        "pattern": "^[A-Za-zÀ-ÿ' -]{2,100}$"
+      },
+      {
+        "orderIndex": 4,
+        "name": "position",
+        "tag": "position",
+        "type": "STRING",
+        "required": false,
+        "nullable": true
+      },
+      {
+        "orderIndex": 5,
+        "name": "department",
+        "tag": "department",
+        "type": "STRING",
+        "required": false,
+        "nullable": true
+      },
+      {
+        "orderIndex": 6,
+        "name": "hireDate",
+        "tag": "hireDate",
+        "type": "LOCAL_DATE",
+        "required": false,
+        "nullable": true,
+        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+      },
+      {
+        "orderIndex": 7,
+        "name": "salary",
+        "tag": "salary",
+        "type": "DECIMAL",
+        "required": false,
+        "nullable": true,
+        "pattern": "^-?\\d+(\\.\\d+)?$"
+      }
+    ]
+  }
+}

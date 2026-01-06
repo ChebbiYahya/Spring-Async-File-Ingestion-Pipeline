@@ -52,6 +52,7 @@ public class MappingRegistry {
         var schema = new CsvSchema();
         schema.setDelimiter(m.getDelimiter());
         schema.setHasHeader(m.isHasHeader());
+        schema.setEntityClassName(cfg.getEntityClassName());
 
         /**
          * duplicateCheck est stocké côté DB sous forme de Set/List.
@@ -101,6 +102,7 @@ public class MappingRegistry {
         var schema = new XmlSchema();
         schema.setRootElement(m.getRootElement());
         schema.setRecordElement(m.getRecordElement());
+        schema.setEntityClassName(cfg.getEntityClassName());
 
         schema.setDuplicateCheck(
                 m.getDuplicateCheck() == null
