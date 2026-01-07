@@ -21,53 +21,23 @@ import java.util.stream.Stream;
 /**
  * FolderServiceImpl
  *
- * Service "filesystem" qui gère le cycle de vie des fichiers déposés pour ingestion.
- *
- * Le projet utilise 4 répertoires (par configuration) :
- *  - DATA_IN        : dépôt initial (upload HTTP)
- *  - DATA_TREATMENT : zone de traitement (un fichier à la fois, renommé avec timestamp)
- *  - DATA_BACKUP    : archive des fichiers traités avec succès
- *  - DATA_FAILED    : archive des fichiers qui ont échoué
- *
- * Ce service fournit :
- *  - création des dossiers (ensureFoldersExist)
- *  - listing de fichiers dans chaque dossier
- *  - sauvegarde d’un upload (saveToInFolder)
- *  - déplacement d’un fichier du IN vers TREATMENT (moveOneFromInToTreatmentWithTimestamp)
- *  - déplacement du TREATMENT vers BACKUP / FAILED
- *
- * Note :
- * - Ce service ne parse pas les fichiers. Il ne fait que gérer les fichiers sur disque.
- * - Le parsing et la persistance DB sont gérés par FileIngestionService + IngestionPipeline.
+ * Service filesystem qui gere le cycle de vie des fichiers pour une config.
  */
 @Service
 @RequiredArgsConstructor
 class FolderServiceImpl implements FolderService {
 
     /**
-     * Fournit les chemins vers les dossiers (base/in/treatment/backup/failed),
-     * mais ces chemins proviennent de la configuration stockée en DB (FileReaderConfig).
-     *
-     * Concrètement : DataFoldersProvider va lire la config "EMPLOYEES" en base et
-     * construire des Path : baseDir + inDir, etc.
+     * Fournit les chemins vers les dossiers (base/in/treatment/backup/failed)
+     * en fonction de la configuration en base (FileReaderConfig).
      */
     private final DataFoldersProvider folders;
 
-    /**
-     * Configuration par défaut utilisée dans ce service.
-     * Ici le code est "fixé" sur EMPLOYEES (une seule config utilisée).
-     *
-     * Si tu veux supporter plusieurs configs, il faudra passer configId en paramètre
-     * à toutes les méthodes (au lieu d'utiliser une constante).
-     */
-    private static final String DEFAULT_CONFIG = "EMPLOYEES";
-
-    // Helpers pour obtenir les chemins des répertoires (résolus via DataFoldersProvider)
-    private Path inPath()        { return folders.inPath(DEFAULT_CONFIG); }
-    private Path treatmentPath() { return folders.treatmentPath(DEFAULT_CONFIG); }
-    private Path backupPath()    { return folders.backupPath(DEFAULT_CONFIG); }
-    private Path failedPath()    { return folders.failedPath(DEFAULT_CONFIG); }
-
+    // Helpers pour obtenir les chemins des repertoires (resolus via DataFoldersProvider)
+    private Path inPath(String configId)        { return folders.inPath(requireConfigId(configId)); }
+    private Path treatmentPath(String configId) { return folders.treatmentPath(requireConfigId(configId)); }
+    private Path backupPath(String configId)    { return folders.backupPath(requireConfigId(configId)); }
+    private Path failedPath(String configId)    { return folders.failedPath(requireConfigId(configId)); }
     /**
      * Format du timestamp ajouté au nom de fichier lorsqu’on le déplace dans DATA_TREATMENT.
      * Exemple : employees_2026-01-02_12-05-44.csv
@@ -81,12 +51,12 @@ class FolderServiceImpl implements FolderService {
      *  - ne lève pas d’erreur si le dossier existe déjà
      */
     @Override
-    public void ensureFoldersExist() {
+    public void ensureFoldersExist(String configId) {
         try {
-            Files.createDirectories(inPath());
-            Files.createDirectories(treatmentPath());
-            Files.createDirectories(backupPath());
-            Files.createDirectories(failedPath());
+            Files.createDirectories(inPath(configId));
+            Files.createDirectories(treatmentPath(configId));
+            Files.createDirectories(backupPath(configId));
+            Files.createDirectories(failedPath(configId));
         } catch (Exception e) {
             // Exception métier unique pour tout ce qui touche au traitement de fichiers
             throw new FileProcessingException("Cannot create DATA folders: " + e.getMessage(), e);
@@ -94,18 +64,18 @@ class FolderServiceImpl implements FolderService {
     }
 
     // Listes de fichiers (noms seulement) par dossier
-    @Override public List<String> listIn()        { return listFiles(inPath()); }
-    @Override public List<String> listTreatment() { return listFiles(treatmentPath()); }
-    @Override public List<String> listBackup()    { return listFiles(backupPath()); }
-    @Override public List<String> listFailed()    { return listFiles(failedPath()); }
+    @Override public List<String> listIn(String configId)        { return listFiles(configId, inPath(configId)); }
+    @Override public List<String> listTreatment(String configId) { return listFiles(configId, treatmentPath(configId)); }
+    @Override public List<String> listBackup(String configId)    { return listFiles(configId, backupPath(configId)); }
+    @Override public List<String> listFailed(String configId)    { return listFiles(configId, failedPath(configId)); }
 
     /**
      * Liste les fichiers présents dans un dossier.
      * - Ne retourne que les fichiers réguliers (pas les sous-dossiers)
      * - Retourne uniquement les noms, pas les chemins complets
      */
-    private List<String> listFiles(Path dir) {
-        ensureFoldersExist();
+    private List<String> listFiles(String configId, Path dir) {
+        ensureFoldersExist(configId);
         try (Stream<Path> s = Files.list(dir)) {
             return s.filter(Files::isRegularFile)
                     .map(p -> p.getFileName().toString())
@@ -130,8 +100,8 @@ class FolderServiceImpl implements FolderService {
      * @throws FileProcessingException si le fichier existe déjà
      */
     @Override
-    public Path saveToInFolder(MultipartFile file) {
-        ensureFoldersExist();
+    public Path saveToInFolder(MultipartFile file, String configId) {
+        ensureFoldersExist(configId);
 
         // Validation de base
         if (file == null || file.isEmpty()) {
@@ -142,7 +112,7 @@ class FolderServiceImpl implements FolderService {
         String original = sanitize(file.getOriginalFilename() == null ? "file" : file.getOriginalFilename());
 
         // Destination dans DATA_IN
-        Path dest = inPath().resolve(original);
+        Path dest = inPath(configId).resolve(original);
 
         // 🚫 RÈGLE MÉTIER : refuser si le fichier existe déjà
         if (Files.exists(dest)) {
@@ -170,9 +140,9 @@ class FolderServiceImpl implements FolderService {
      * @return true if the file was deleted, false if it did not exist
      */
     @Override
-    public boolean deleteFromIn(String fileName) {
-        ensureFoldersExist();
-        Path target = resolveInFile(fileName);
+    public boolean deleteFromIn(String configId, String fileName) {
+        ensureFoldersExist(configId);
+        Path target = resolveInFile(configId, fileName);
 
         try {
             return Files.deleteIfExists(target);
@@ -188,10 +158,10 @@ class FolderServiceImpl implements FolderService {
      * Deletes all regular files from DATA_IN and returns the deleted names.
      */
     @Override
-    public List<String> deleteAllFromIn() {
-        ensureFoldersExist();
+    public List<String> deleteAllFromIn(String configId) {
+        ensureFoldersExist(configId);
 
-        try (Stream<Path> s = Files.list(inPath())) {
+        try (Stream<Path> s = Files.list(inPath(configId))) {
             List<Path> files = s.filter(Files::isRegularFile)
                     .collect(Collectors.toList());
 
@@ -235,10 +205,10 @@ class FolderServiceImpl implements FolderService {
      */
 
     @Override
-    public Path moveOneFromInToTreatmentWithTimestamp() {
-        ensureFoldersExist();
+    public Path moveOneFromInToTreatmentWithTimestamp(String configId) {
+        ensureFoldersExist(configId);
 
-        try (Stream<Path> s = Files.list(inPath())) {
+        try (Stream<Path> s = Files.list(inPath(configId))) {
 
             // Choisir le plus ancien fichier (par date de modification)
             Path chosen = s.filter(Files::isRegularFile)
@@ -253,7 +223,7 @@ class FolderServiceImpl implements FolderService {
             String renamed = appendTimestamp(fileName, LocalDateTime.now());
 
             // Nouveau chemin dans DATA_TREATMENT
-            Path target = treatmentPath().resolve(renamed);
+            Path target = treatmentPath(configId).resolve(renamed);
 
             // Move (atomique si possible sur le même FS)
             return Files.move(chosen, target, StandardCopyOption.REPLACE_EXISTING);
@@ -268,13 +238,13 @@ class FolderServiceImpl implements FolderService {
      * À utiliser après traitement réussi.
      */
     @Override
-    public Path moveTreatmentToBackup(Path treatmentFile) {
-        ensureFoldersExist();
+    public Path moveTreatmentToBackup(String configId, Path treatmentFile) {
+        ensureFoldersExist(configId);
         if (treatmentFile == null) {
             throw new FileProcessingException("treatment File is null");
         }
 
-        Path target = backupPath().resolve(treatmentFile.getFileName().toString());
+        Path target = backupPath(configId).resolve(treatmentFile.getFileName().toString());
 
         try {
             return Files.move(treatmentFile, target, StandardCopyOption.REPLACE_EXISTING);
@@ -288,13 +258,13 @@ class FolderServiceImpl implements FolderService {
      * À utiliser si le parsing/validation/persistence a échoué.
      */
     @Override
-    public Path moveTreatmentToFailed(Path treatmentFile) {
-        ensureFoldersExist();
+    public Path moveTreatmentToFailed(String configId, Path treatmentFile) {
+        ensureFoldersExist(configId);
         if (treatmentFile == null) {
             throw new FileProcessingException("treatment File is null");
         }
 
-        Path target = failedPath().resolve(treatmentFile.getFileName().toString());
+        Path target = failedPath(configId).resolve(treatmentFile.getFileName().toString());
 
         try {
             return Files.move(treatmentFile, target, StandardCopyOption.REPLACE_EXISTING);
@@ -316,11 +286,17 @@ class FolderServiceImpl implements FolderService {
         }
     }
 
+    private String requireConfigId(String configId) {
+        if (configId == null || configId.isBlank()) {
+            throw new FileProcessingException("configId is required");
+        }
+        return configId;
+    }
 
     /**
      * Resolves a simple file name inside DATA_IN and rejects path traversal.
      */
-    private Path resolveInFile(String fileName) {
+    private Path resolveInFile(String configId, String fileName) {
         if (fileName == null || fileName.isBlank()) {
             throw new FileProcessingException("File name is required");
         }
@@ -334,8 +310,9 @@ class FolderServiceImpl implements FolderService {
             throw new FileProcessingException("Invalid file name: " + fileName);
         }
 
-        return inPath().resolve(simpleName);
+        return inPath(configId).resolve(simpleName);
     }
+
     /**
      * Ajoute un timestamp au nom de fichier avant extension.
      * Exemple : employees.csv -> employees_2026-01-02_10-15-00.csv

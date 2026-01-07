@@ -7,25 +7,25 @@ import java.nio.file.Path;
 import java.util.List;
 
 public interface FolderService {
-    void ensureFoldersExist();
+    void ensureFoldersExist(String configId);
 
-    List<String> listIn();
+    List<String> listIn(String configId);
 
-    List<String> listTreatment();
+    List<String> listTreatment(String configId);
 
-    List<String> listBackup();
+    List<String> listBackup(String configId);
 
-    List<String> listFailed();
+    List<String> listFailed(String configId);
 
-    Path saveToInFolder(MultipartFile file);
+    Path saveToInFolder(MultipartFile file, String configId);
 
-    boolean deleteFromIn(String fileName);
+    boolean deleteFromIn(String configId, String fileName);
 
-    List<String> deleteAllFromIn();
+    List<String> deleteAllFromIn(String configId);
 
-    Path moveOneFromInToTreatmentWithTimestamp();
+    Path moveOneFromInToTreatmentWithTimestamp(String configId);
 
-    Path moveTreatmentToBackup(Path treatmentFile);
+    Path moveTreatmentToBackup(String configId, Path treatmentFile);
 
-    Path moveTreatmentToFailed(Path treatmentFile);
+    Path moveTreatmentToFailed(String configId, Path treatmentFile);
 }

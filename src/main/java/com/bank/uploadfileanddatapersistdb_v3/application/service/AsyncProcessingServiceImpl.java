@@ -36,7 +36,7 @@ public class AsyncProcessingServiceImpl implements AsyncProcessingService {
 
     /**
      * Fournit les chemins des dossiers (base/in/treatment/backup/failed)
-     * en fonction d’une configId (ex: EMPLOYEES).
+     * en fonction d’une configId (ex: CONFIG_ID).
      * Les chemins proviennent de la config stockée en DB.
      */
     private final DataFoldersProvider folders;
@@ -77,24 +77,22 @@ public class AsyncProcessingServiceImpl implements AsyncProcessingService {
     /**
      * Démarre un job :
      * - s’assure que les dossiers existent
-     * - détermine la configId à utiliser (par défaut "EMPLOYEES")
+     * - determine la configId a utiliser
      * - compte le nombre total d’enregistrements dans DATA_IN (tous fichiers)
      * - initialise le job dans JobProgressService et retourne son jobId
      *
-     * @param configId identifiant de configuration (optionnel)
+     * @param configId identifiant de configuration
      * @return jobId unique (UUID) à utiliser ensuite pour suivre la progression
      */
     @Override
     public String startJob(String configId) {
-        folderService.ensureFoldersExist();
+        String id = requireConfigId(configId);
+        folderService.ensureFoldersExist(id);
 
-        // Si configId est absent, on utilise la config par défaut
-        String id = (configId == null || configId.isBlank()) ? "EMPLOYEES" : configId;
-
-        // totalRecords sert à calculer un % réaliste + ETA (timeLeft)
+        // totalRecords sert a calculer un % realiste + ETA (timeLeft)
         int totalRecords = countTotalRecordsInDataIn(id);
 
-        // Création du job (status RUNNING) + stockage du totalRecords
+        // Creation du job (status RUNNING) + stockage du totalRecords
         String jobId = jobProgressService.start(totalRecords);
         jobResultService.start(jobId);
         return jobId;
@@ -118,21 +116,20 @@ public class AsyncProcessingServiceImpl implements AsyncProcessingService {
      * - erreur globale => jobProgressService.fail(jobId)
      *
      * @param jobId identifiant du job (retourné par startJob)
-     * @param configId identifiant de config (optionnel, défaut EMPLOYEES)
+     * @param configId identifiant de config
      */
     @Override
     @Async
     public void runJob(String jobId, String configId) {
 
-        // Choix de la configuration
-        String id = (configId == null || configId.isBlank()) ? "EMPLOYEES" : configId;
+        String id = requireConfigId(configId);
 
         try {
             while (true) {
 
                 // 1) Prendre 1 fichier du dossier IN et le déplacer en TREATMENT
                 //    (le fichier est renommé avec timestamp par FolderService)
-                Path treatmentFile = folderService.moveOneFromInToTreatmentWithTimestamp();
+                Path treatmentFile = folderService.moveOneFromInToTreatmentWithTimestamp(id);
 
                 // S'il n'y a plus de fichiers à traiter, on sort de la boucle
                 if (treatmentFile == null) break;
@@ -166,12 +163,12 @@ public class AsyncProcessingServiceImpl implements AsyncProcessingService {
                         // Note : on ne fait pas incrementProcessed car ce fichier
                         // ne fait normalement pas partie du "totalRecords" (countRecords renvoie 0).
                         jobResultService.addFailed(jobId, treatmentFile.getFileName().toString(), "Unsupported file type");
-                        folderService.moveTreatmentToFailed(treatmentFile);
+                        folderService.moveTreatmentToFailed(id, treatmentFile);
                         continue;
                     }
 
                     // 4) Si ingestion OK => on archive en BACKUP
-                    folderService.moveTreatmentToBackup(treatmentFile);
+                    folderService.moveTreatmentToBackup(id, treatmentFile);
                     jobResultService.addTreated(jobId, treatmentFile.getFileName().toString());
 
                 } catch (Exception ex) {
@@ -184,7 +181,7 @@ public class AsyncProcessingServiceImpl implements AsyncProcessingService {
                             treatmentFile.getFileName().toString(),
                             ex.getMessage()
                     );
-                    folderService.moveTreatmentToFailed(treatmentFile);
+                    folderService.moveTreatmentToFailed(id, treatmentFile);
 
                     // Important : on continue la boucle => le job traite les autres fichiers
                     // (on ne stoppe pas tout le batch sur une erreur isolée)
@@ -231,7 +228,6 @@ public class AsyncProcessingServiceImpl implements AsyncProcessingService {
                 // countRecords(...) retourne 0 si extension inconnue
                 total += Math.max(0, fileRecordCounter.countRecords(p, configId));
             }
-
             return total;
 
         } catch (Exception e) {
@@ -240,5 +236,12 @@ public class AsyncProcessingServiceImpl implements AsyncProcessingService {
                     .error("Failed to count total records in DATA_IN: {}", e.getMessage(), e);
             return 0;
         }
+    }
+
+    private String requireConfigId(String configId) {
+        if (configId == null || configId.isBlank()) {
+            throw new IllegalArgumentException("configId is required");
+        }
+        return configId;
     }
 }

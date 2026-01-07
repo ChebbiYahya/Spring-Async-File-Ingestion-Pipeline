@@ -24,25 +24,67 @@ public class GenericDuplicateRepository {
     private EntityManager em;
 
     /**
-     * Checks if an entity exists in DB using dynamic fields.
+     * Vérifie l'existence d'au moins une entité en base
+     * correspondant à un ensemble dynamique de champs (clé de doublon).
      *
-     * @param entityClass target JPA class
-     * @param fields      Map <fieldName, typedValue>
-     * @return true si au moins un enregistrement correspond en DB
+     * Cette méthode est générique :
+     * - elle fonctionne pour n'importe quelle entité JPA
+     * - elle construit la requête dynamiquement à partir des champs fournis
+     *
+     * Exemple conceptuel :
+     * fields = { "id"=12, "firstName"="John", "lastName"="Doe" }
+     *
+     * => SELECT COUNT(e)
+     *    FROM Entity e
+     *    WHERE e.id = 12
+     *      AND e.firstName = 'John'
+     *      AND e.lastName = 'Doe'
+     *
+     * @param entityClass classe JPA cible (ex: Employee.class)
+     * @param fields Map <nomDuChamp, valeurTypée>
+     *               Les clés doivent correspondre aux attributs JPA de l'entité
+     * @return true s'il existe au moins un enregistrement correspondant en base
      */
+
     public boolean existsByFields(Class<?> entityClass, Map<String, Object> fields) {
+
+        // 1) Récupère le CriteriaBuilder depuis l'EntityManager
+        //    Il sert à construire dynamiquement des requêtes typées JPA
         CriteriaBuilder cb = em.getCriteriaBuilder();
+
+        // 2) Création d'une requête Criteria qui retourne un Long
+        //    (ici : le nombre d'enregistrements correspondants)
         CriteriaQuery<Long> cq = cb.createQuery(Long.class);
+
+        // 3) Définition de la racine de la requête (FROM EntityClass e)
         Root<?> root = cq.from(entityClass);
 
-        Predicate p = cb.conjunction();
-        for (var e : fields.entrySet()) {
-            p = cb.and(p, cb.equal(root.get(e.getKey()), e.getValue()));
+        // 4) Création d'un prédicat initial "TRUE"
+        //    cb.conjunction() = 1=1
+        //    Utile pour enchaîner dynamiquement des AND
+        Predicate predicate = cb.conjunction();
+
+        // 5) Pour chaque champ fourni :
+        //    on ajoute une condition e.<field> = <value>
+        for (var entry : fields.entrySet()) {
+
+            // root.get(fieldName) fait référence à l'attribut JPA de l'entité
+            // cb.equal(...) génère une condition d'égalité
+            predicate = cb.and(
+                    predicate,
+                    cb.equal(root.get(entry.getKey()), entry.getValue())
+            );
         }
 
-        cq.select(cb.count(root)).where(p);
+        // 6) SELECT COUNT(e) WHERE <predicate>
+        //    On ne charge pas l'entité, on compte simplement
+        cq.select(cb.count(root)).where(predicate);
 
+        // 7) Exécution de la requête
+        //    getSingleResult() retourne toujours un Long (0 ou plus)
         Long count = em.createQuery(cq).getSingleResult();
+
+        // 8) Si au moins un enregistrement existe, c'est un doublon
         return count != null && count > 0;
     }
 }

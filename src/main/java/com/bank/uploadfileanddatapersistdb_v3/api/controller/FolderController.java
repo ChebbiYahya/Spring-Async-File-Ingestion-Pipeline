@@ -42,6 +42,8 @@ public class FolderController {
             produces = MediaType.APPLICATION_JSON_VALUE
     )
     public ResponseEntity<Map<String, Object>> uploadToIn(
+            @Parameter(description = "Configuration id", required = true)
+            @RequestParam(name = "configId") String configId,
 
             // IMPORTANT:
             // - @RequestPart => multipart/form-data (champ de formulaire)
@@ -79,7 +81,7 @@ public class FolderController {
                 continue;
             }
 
-            Path saved = folderService.saveToInFolder(file);
+            Path saved = folderService.saveToInFolder(file, configId);
             savedAs.add(saved.getFileName().toString());
         }
 
@@ -90,7 +92,7 @@ public class FolderController {
         Map<String, Object> out = new HashMap<>();
         out.put("savedAs", savedAs);
         out.put("rejected", rejected);
-        out.put("folders", folderStatus());
+        out.put("folders", folderStatus(configId));
         return ResponseEntity.ok(out);
     }
 
@@ -104,17 +106,19 @@ public class FolderController {
             @ApiResponse(responseCode = "404", description = "File not found", content = @Content)
     })
     public ResponseEntity<Map<String, Object>> deleteFromIn(
+            @Parameter(description = "Configuration id", required = true)
+            @RequestParam(name = "configId") String configId,
             @Parameter(description = "File name in DATA_IN", required = true)
             @PathVariable String fileName
     ) {
-        boolean deleted = folderService.deleteFromIn(fileName);
+        boolean deleted = folderService.deleteFromIn(configId, fileName);
         if (!deleted) {
             return ResponseEntity.notFound().build();
         }
 
         Map<String, Object> out = new HashMap<>();
         out.put("deleted", fileName);
-        out.put("folders", folderStatus());
+        out.put("folders", folderStatus(configId));
         return ResponseEntity.ok(out);
     }
 
@@ -126,13 +130,16 @@ public class FolderController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Files deleted successfully")
     })
-    public ResponseEntity<Map<String, Object>> deleteAllFromIn() {
-        List<String> deleted = folderService.deleteAllFromIn();
+    public ResponseEntity<Map<String, Object>> deleteAllFromIn(
+            @Parameter(description = "Configuration id", required = true)
+            @RequestParam(name = "configId") String configId
+    ) {
+        List<String> deleted = folderService.deleteAllFromIn(configId);
 
         Map<String, Object> out = new HashMap<>();
         out.put("deleted", deleted);
         out.put("count", deleted.size());
-        out.put("folders", folderStatus());
+        out.put("folders", folderStatus(configId));
         return ResponseEntity.ok(out);
     }
 
@@ -166,13 +173,16 @@ public class FolderController {
                     content = @Content
             )
     })
-    public Map<String, List<String>> folderStatus() {
-        folderService.ensureFoldersExist();
+    public Map<String, List<String>> folderStatus(
+            @Parameter(description = "Configuration id", required = true)
+            @RequestParam(name = "configId") String configId
+    ) {
+        folderService.ensureFoldersExist(configId);
         Map<String, List<String>> out = new HashMap<>();
-        out.put("DATA_IN", folderService.listIn());
-        out.put("DATA_TREATMENT", folderService.listTreatment());
-        out.put("DATA_BACKUP", folderService.listBackup());
-        out.put("DATA_FAILED", folderService.listFailed());
+        out.put("DATA_IN", folderService.listIn(configId));
+        out.put("DATA_TREATMENT", folderService.listTreatment(configId));
+        out.put("DATA_BACKUP", folderService.listBackup(configId));
+        out.put("DATA_FAILED", folderService.listFailed(configId));
         return out;
     }
 }

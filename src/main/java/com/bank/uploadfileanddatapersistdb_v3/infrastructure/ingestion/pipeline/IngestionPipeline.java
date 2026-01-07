@@ -35,8 +35,10 @@ import java.util.*;
  * 4) log success/fail
  * 5) notifier progress
  */
+
 @Component
 @RequiredArgsConstructor
+
 public class IngestionPipeline {
 
     /**
@@ -59,20 +61,7 @@ public class IngestionPipeline {
      */
     private final DuplicateKeyBuilder keyBuilder = new DuplicateKeyBuilder();
 
-    /**
-     * Méthode "compatibilité" : même pipeline mais sans progressReporter.
-     * Elle appelle la méthode principale avec progressReporter=null.
-     */
-//    public int process(
-//            String fileName,
-//            List<String> duplicateCheck,
-//            Iterator<Map<String, String>> rawRecords,
-//            List<? extends FieldRule> rules,
-//            RecordPersister persister,
-//            DuplicateDbChecker dbChecker
-//    ) {
-//        return process(fileName, duplicateCheck, rawRecords, rules, persister, dbChecker, null);
-//    }
+
 
     /**
      * Traite tous les records d’un fichier.

@@ -66,8 +66,7 @@ public class ProcessingController {
      *
      * Démarre un job asynchrone de traitement des fichiers présents dans DATA_IN.
      *
-     * @param configId identifiant de configuration (ex: "EMPLOYEES").
-     *                Si null/blank -> valeur par défaut utilisée côté service.
+     * @param configId identifiant de configuration.
      * @return JSON contenant jobId pour suivre la progression.
      */
     @Operation(
@@ -90,10 +89,11 @@ public class ProcessingController {
     @PostMapping(value = "/start-async", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, String>> startAsync(
             @Parameter(
-                    description = "Optional configuration id. Example: EMPLOYEES",
-                    example = "EMPLOYEES"
+                    description = "Configuration id",
+                    example = "CONFIG_ID",
+                    required = true
             )
-            @RequestParam(name = "configId", required = false) String configId
+            @RequestParam(name = "configId") String configId
     ) {
         // 1) Initialise un job (création du jobId + totalRecords)
         String jobId = asyncProcessingService.startJob(configId);

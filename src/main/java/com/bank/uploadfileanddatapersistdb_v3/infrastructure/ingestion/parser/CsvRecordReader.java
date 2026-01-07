@@ -54,6 +54,8 @@ public class CsvRecordReader implements RecordReader {
     public CsvRecordReader(MultipartFile file, CsvSchema schema) throws Exception {
         this.schema = schema;
 
+        validateFileMetadata(file);
+
         // On force UTF-8 pour éviter les problèmes d'encodage
         this.reader = new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8);
 
@@ -111,6 +113,104 @@ public class CsvRecordReader implements RecordReader {
                     );
                 }
             }
+        }
+    }
+
+    private void validateFileMetadata(MultipartFile file) throws Exception {
+        String firstLine = readFirstNonEmptyLine(file);
+        if (firstLine == null) {
+            throw new SchemaValidationException("CSV file is empty.");
+        }
+
+        char expectedDelimiter = schema.getDelimiter().charAt(0);
+        char detectedDelimiter = detectDelimiter(firstLine);
+        if (detectedDelimiter != 0 && detectedDelimiter != expectedDelimiter) {
+            throw new SchemaValidationException(
+                    "CSV delimiter mismatch: expected '" + expectedDelimiter + "' but detected '" + detectedDelimiter + "'"
+            );
+        }
+        if (detectedDelimiter == 0 && expectedDelimiterMissing(firstLine, expectedDelimiter) && schema.getColumns().size() > 1) {
+            throw new SchemaValidationException(
+                    "CSV delimiter mismatch: expected '" + expectedDelimiter + "' but none detected in file"
+            );
+        }
+
+        if (schema.isHasHeader() && headerMissing(firstLine, expectedDelimiter)) {
+            throw new SchemaValidationException(
+                    "CSV header expected (hasHeader=true) but not found in file"
+            );
+        }
+    }
+
+    private String readFirstNonEmptyLine(MultipartFile file) throws Exception {
+        try (var in = file.getInputStream();
+             var r = new InputStreamReader(in, StandardCharsets.UTF_8);
+             var br = new java.io.BufferedReader(r)) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                if (!line.isBlank()) {
+                    return line;
+                }
+            }
+            return null;
+        }
+    }
+
+    private char detectDelimiter(String line) {
+        char[] candidates = new char[]{',', ';', '\t', '|'};
+        int bestCount = 0;
+        char best = 0;
+        for (char c : candidates) {
+            int count = countOccurrences(line, c);
+            if (count > bestCount) {
+                bestCount = count;
+                best = c;
+            }
+        }
+        return bestCount > 0 ? best : 0;
+    }
+
+    private int countOccurrences(String line, char c) {
+        int count = 0;
+        for (int i = 0; i < line.length(); i++) {
+            if (line.charAt(i) == c) count++;
+        }
+        return count;
+    }
+
+    private boolean expectedDelimiterMissing(String line, char expectedDelimiter) {
+        return line.indexOf(expectedDelimiter) < 0;
+    }
+
+    private boolean headerMissing(String firstLine, char expectedDelimiter) throws Exception {
+        List<String> expectedHeaders = new ArrayList<>();
+        for (CsvColumnRule c : schema.getColumns()) {
+            String h = c.getHeader();
+            if (h != null && !h.isBlank()) expectedHeaders.add(h);
+        }
+        if (expectedHeaders.isEmpty()) {
+            return false;
+        }
+
+        CSVFormat fmt = CSVFormat.DEFAULT.builder()
+                .setDelimiter(expectedDelimiter)
+                .setTrim(true)
+                .build();
+        try (CSVParser headerParser = CSVParser.parse(firstLine, fmt)) {
+            List<CSVRecord> records = headerParser.getRecords();
+            if (records.isEmpty()) {
+                return true;
+            }
+
+            CSVRecord header = records.get(0);
+            for (String expected : expectedHeaders) {
+                for (String actual : header) {
+                    if (expected.equals(actual)) {
+                        return false;
+                    }
+                }
+            }
+            return true;
         }
     }
 
